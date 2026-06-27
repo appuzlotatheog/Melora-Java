@@ -1,0 +1,5 @@
+## Requirements 
+
+Java JDK 26, 
+FFMPEG *in linux use sudo apt install ffmpeg*
+

@@ -1,0 +1,215 @@
+package com.discord.musicbot.commands.framework;
+
+import com.discord.musicbot.audio.PlayerManager;
+import com.discord.musicbot.data.HistoryManager;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.Command;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class AutocompleteHandler {
+
+    public static void handle(CommandAutoCompleteInteractionEvent event) {
+        String command = event.getName();
+        String focusedOption = event.getFocusedOption().getName();
+        String value = event.getFocusedOption().getValue().trim();
+
+        // Playlist name autocomplete
+        if ((command.equals("playlist") || command.equals("mewsic"))
+                && (focusedOption.equals("name") || focusedOption.equals("playlist") || focusedOption.equals("old"))) {
+            String userId = event.getUser().getId();
+            List<com.discord.musicbot.data.model.PlaylistData> playlists = com.discord.musicbot.data.PlaylistManager
+                    .getInstance().getPlaylists(userId);
+            List<Command.Choice> choices = new ArrayList<>();
+            String lowerValue = value.toLowerCase();
+            for (com.discord.musicbot.data.model.PlaylistData pl : playlists) {
+                if (choices.size() >= 25)
+                    break;
+                if (lowerValue.isEmpty() || pl.getName().toLowerCase().contains(lowerValue)) {
+                    String mewsicTag = pl.isMewsic() ? " (from mewsic)" : "";
+                    String label = pl.getName() + mewsicTag + " (" + pl.getTracks().size() + " tracks)";
+                    if (label.length() > 100)
+                        label = label.substring(0, 97) + "...";
+                    choices.add(new Command.Choice(label, pl.getName()));
+                }
+            }
+            event.replyChoices(choices).queue();
+            return;
+        }
+
+        // Help command autocomplete
+        if (command.equals("help") && focusedOption.equals("command")) {
+            List<String> commands = List.of(
+                    "play", "playinstant", "playnext", "pause", "resume", "skip", "previous", "stop", "disconnect", "autoplay",
+                    "247", "join", "leave", "replay", "forward", "rewind", "removedupes", "grab", "search",
+                    "queue", "nowplaying", "shuffle", "loop", "remove", "insert", "move", "clear", "jump",
+                    "playlist", "playlist create", "playlist delete", "playlist rename", "playlist list",
+                    "playlist info",
+                    "playlist tracks", "playlist add", "playlist addqueue", "playlist remove", "playlist move",
+                    "playlist dedupe",
+                    "playlist play", "playlist instant", "playlist export", "playlist import",
+                    "favorites", "favorites add", "favorites remove", "favorites list", "favorites play",
+                    "favorites instant",
+                    "mewsic", "mewsic play", "mewsic import", "mewsic export",
+                    "volume", "seek", "ping", "time", "lyrics", "stats", "history", "savedqueue", "vote", "djmode",
+                    "blacklist", "settings", "filter", "karaoke", "grab", "wrapped");
+            List<Command.Choice> choices = new ArrayList<>();
+            String lowerValue = value.toLowerCase();
+            for (String cmd : commands) {
+                if (choices.size() >= 25)
+                    break;
+                if (lowerValue.isEmpty() || cmd.contains(lowerValue)) {
+                    choices.add(new Command.Choice(cmd, cmd));
+                }
+            }
+            event.replyChoices(choices).queue();
+            return;
+        }
+
+        // Queue and Clear command user filter autocomplete
+        if ((command.equals("queue") || command.equals("clear")) && focusedOption.equals("user")) {
+            com.discord.musicbot.audio.MusicManager manager = PlayerManager.getInstance()
+                    .getMusicManager(event.getGuild().getIdLong());
+            if (manager == null) {
+                event.replyChoices(new ArrayList<>()).queue();
+                return;
+            }
+            java.util.Map<String, String> userNames = new java.util.HashMap<>();
+            java.util.Map<String, Integer> userCounts = new java.util.HashMap<>();
+            for (AudioTrack track : manager.getScheduler().getQueue()) {
+                Object ud = track.getUserData();
+                String id = "";
+                String name = "Unknown";
+                if (ud instanceof net.dv8tion.jda.api.entities.User u) {
+                    id = u.getId();
+                    name = u.getEffectiveName();
+                } else if (ud instanceof String s) {
+                    if (s.contains("\"requester\":\"")) {
+                        id = s.split("\"requester\":\"")[1].split("\"")[0];
+                    } else {
+                        id = s;
+                    }
+                    net.dv8tion.jda.api.entities.User u = event.getJDA().getUserById(id);
+                    name = u != null ? u.getEffectiveName() : id;
+                }
+                if (!id.isEmpty()) {
+                    userNames.put(id, name);
+                    userCounts.put(id, userCounts.getOrDefault(id, 0) + 1);
+                }
+            }
+            List<Command.Choice> choices = new ArrayList<>();
+            String lowerValue = value.toLowerCase();
+            for (java.util.Map.Entry<String, String> entry : userNames.entrySet()) {
+                if (choices.size() >= 25)
+                    break;
+                String label = entry.getValue() + " (" + userCounts.get(entry.getKey()) + " tracks)";
+                if (lowerValue.isEmpty() || label.toLowerCase().contains(lowerValue)) {
+                    if (label.length() > 100)
+                        label = label.substring(0, 97) + "...";
+                    choices.add(new Command.Choice(label, entry.getKey()));
+                }
+            }
+            event.replyChoices(choices).queue();
+            return;
+        }
+
+        // Queue autocomplete (remove, move, jump)
+        if ((command.equals("remove") && focusedOption.equals("position")) ||
+                (command.equals("move") && (focusedOption.equals("from") || focusedOption.equals("to"))) ||
+                (command.equals("jump") && focusedOption.equals("position"))) {
+            com.discord.musicbot.audio.MusicManager manager = PlayerManager.getInstance()
+                    .getMusicManager(event.getGuild().getIdLong());
+            if (manager == null) {
+                event.replyChoices(new ArrayList<>()).queue();
+                return;
+            }
+            List<AudioTrack> queue = new ArrayList<>(manager.getScheduler().getQueue());
+            List<Command.Choice> choices = new ArrayList<>();
+            for (int i = 0; i < queue.size(); i++) {
+                if (choices.size() >= 25)
+                    break;
+                String indexStr = String.valueOf(i + 1);
+                if (value.isEmpty() || indexStr.startsWith(value)
+                        || queue.get(i).getInfo().title.toLowerCase().contains(value.toLowerCase())) {
+                    String title = (i + 1) + ". " + queue.get(i).getInfo().title;
+                    if (title.length() > 100)
+                        title = title.substring(0, 97) + "...";
+                    choices.add(new Command.Choice(title, i + 1));
+                }
+            }
+            event.replyChoices(choices).queue();
+            return;
+        }
+
+        // Favorites and playlist query autocomplete — reuse existing search logic
+        if ((command.equals("favorites") || command.equals("playlist")) && focusedOption.equals("query")) {
+            // Fall through to existing search logic below
+        } else if (command.equals("play") || command.equals("insert") || command.equals("playinstant")) {
+            // Fall through to existing search logic below
+        } else {
+            return;
+        }
+
+        List<Command.Choice> choices = new ArrayList<>();
+
+        // Show history results (filtered by query if present)
+        String userId = event.getUser().getId();
+        List<HistoryManager.HistoryEntry> history = HistoryManager.getInstance().search(userId, value.toLowerCase());
+        for (HistoryManager.HistoryEntry h : history) {
+            if (choices.size() >= 25)
+                break;
+            String label = "🕛 " + (h.title.length() > 90 ? h.title.substring(0, 90) + "..." : h.title);
+            choices.add(new Command.Choice(label, h.uri));
+        }
+
+        // If user typed something, search Lavaplayer for exact video titles
+        if (value.length() >= 2 && !value.startsWith("http")) {
+            com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager apm = com.discord.musicbot.audio.PlayerManager
+                    .getInstance().getPlayerManager();
+            final List<Command.Choice> finalChoices = new ArrayList<>(choices);
+
+            apm.loadItem("ytsearch:" + value, new com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler() {
+                @Override
+                public void trackLoaded(com.sedmelluq.discord.lavaplayer.track.AudioTrack track) {
+                    String title = track.getInfo().title;
+                    if (title.length() > 95)
+                        title = title.substring(0, 95) + "...";
+                    finalChoices.add(new Command.Choice("🔎 " + title, track.getInfo().uri));
+                    event.replyChoices(finalChoices).queue();
+                }
+
+                @Override
+                public void playlistLoaded(com.sedmelluq.discord.lavaplayer.track.AudioPlaylist playlist) {
+                    for (com.sedmelluq.discord.lavaplayer.track.AudioTrack track : playlist.getTracks()) {
+                        if (finalChoices.size() >= 25)
+                            break;
+                        String title = track.getInfo().title;
+                        if (title.length() > 95)
+                            title = title.substring(0, 95) + "...";
+                        finalChoices.add(new Command.Choice("🔎 " + title, track.getInfo().uri));
+                    }
+                    event.replyChoices(finalChoices).queue();
+                }
+
+                @Override
+                public void noMatches() {
+                    event.replyChoices(finalChoices).queue();
+                }
+
+                @Override
+                public void loadFailed(com.sedmelluq.discord.lavaplayer.tools.FriendlyException exception) {
+                    event.replyChoices(finalChoices).queue();
+                }
+            });
+            return; // Return early because reply is handled asynchronously
+        }
+
+        // Cap at 25 (Discord limit)
+        if (choices.size() > 25)
+            choices = choices.subList(0, 25);
+
+        event.replyChoices(choices).queue();
+    }
+}
