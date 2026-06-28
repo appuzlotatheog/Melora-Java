@@ -134,7 +134,24 @@ public class PlayerManager {
     }
 
     public void shutdown() {
-        new java.util.ArrayList<>(musicManagers.values()).forEach(MusicManager::cleanup);
+        java.util.List<java.util.concurrent.CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+        for (MusicManager manager : musicManagers.values()) {
+            futures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    manager.cleanup();
+                } catch (Exception e) {
+                    logger.error("Error during MusicManager cleanup for guild {}", manager.getGuild().getId(), e);
+                }
+            }, ioExecutor));
+        }
+
+        try {
+            java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture[0]))
+                    .get(10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            logger.warn("Shutdown cleanup timed out or was interrupted", e);
+        }
+
         musicManagers.clear();
         playerManager.shutdown();
         ioExecutor.shutdown();
