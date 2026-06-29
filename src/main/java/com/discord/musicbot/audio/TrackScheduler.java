@@ -351,8 +351,9 @@ public class TrackScheduler extends AudioEventAdapter {
                                 musicManager.startIdleTimeout();
                                 if (musicManager.getNowPlayingChannelId() != null) {
                                     try {
-                                        net.dv8tion.jda.api.entities.channel.concrete.TextChannel tc = musicManager.getGuild()
-                                            .getTextChannelById(musicManager.getNowPlayingChannelId());
+                                        net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel tc = musicManager.getGuild()
+                        .getChannelById(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel.class,
+                                musicManager.getNowPlayingChannelId());
                                         if (tc != null) {
                                             tc.sendMessage(com.discord.musicbot.commands.framework.EmbedHelper.MSG_ERROR + " Autoplay ran out of recommendations.").queue();
                                         }

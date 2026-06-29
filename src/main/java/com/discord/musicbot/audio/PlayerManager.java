@@ -34,6 +34,7 @@ public class PlayerManager {
 
     public static final java.util.concurrent.ExecutorService ioExecutor = java.util.concurrent.Executors.newCachedThreadPool();
     public static final java.util.concurrent.ScheduledExecutorService scheduledExecutor = java.util.concurrent.Executors.newScheduledThreadPool(4);
+    public static volatile boolean isShuttingDown = false;
 
     private PlayerManager() {
         this.musicManagers = new ConcurrentHashMap<>();
@@ -134,6 +135,7 @@ public class PlayerManager {
     }
 
     public void shutdown() {
+        isShuttingDown = true;
         java.util.List<java.util.concurrent.CompletableFuture<Void>> futures = new java.util.ArrayList<>();
         for (MusicManager manager : musicManagers.values()) {
             futures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {

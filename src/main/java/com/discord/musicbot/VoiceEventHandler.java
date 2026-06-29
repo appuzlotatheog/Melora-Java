@@ -30,6 +30,10 @@ public class VoiceEventHandler extends ListenerAdapter {
 
         // Handle bot being kicked/disconnected
         if (event.getMember().equals(guild.getSelfMember())) {
+            if (PlayerManager.isShuttingDown) {
+                return; // Ignore disconnects during shutdown sequence
+            }
+
             if (event.getChannelLeft() != null && event.getChannelJoined() == null) {
                 // Bot was disconnected from voice channel
                 logger.info("Bot was disconnected from voice in guild: {}", guild.getName());
@@ -57,7 +61,7 @@ public class VoiceEventHandler extends ListenerAdapter {
                     return;
                 } else {
                     if (manager != null && manager.getNowPlayingChannelId() != null) {
-                        net.dv8tion.jda.api.entities.channel.concrete.TextChannel tc = guild.getTextChannelById(manager.getNowPlayingChannelId());
+                        net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel tc = guild.getChannelById(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel.class, manager.getNowPlayingChannelId());
                         if (tc != null) {
                             tc.sendMessageEmbeds(new net.dv8tion.jda.api.EmbedBuilder()
                                 .setColor(new java.awt.Color(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN))
