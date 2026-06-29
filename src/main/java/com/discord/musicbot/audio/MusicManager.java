@@ -443,24 +443,17 @@ public class MusicManager {
             net.dv8tion.jda.api.components.container.Container container) {
         try {
             if (nowPlayingMessageId != null) {
-                net.dv8tion.jda.api.utils.messages.MessageEditData editData = new net.dv8tion.jda.api.utils.messages.MessageEditBuilder()
+                channel.editMessageById(nowPlayingMessageId, "")
                         .setReplace(true)
-                        .setContent("")
                         .setComponents(container)
                         .setAllowedMentions(java.util.Collections.emptyList())
-                        .build();
-
-                channel.editMessageById(nowPlayingMessageId, editData)
                         .useComponentsV2()
                         .queue(success -> isSendingNowPlaying = false, e -> {
                             nowPlayingMessageId = null;
                             try {
-                                net.dv8tion.jda.api.utils.messages.MessageCreateData createData = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder()
-                                        .setContent("")
+                                channel.sendMessage("")
                                         .setComponents(container)
                                         .setAllowedMentions(java.util.Collections.emptyList())
-                                        .build();
-                                channel.sendMessage(createData)
                                         .useComponentsV2()
                                         .queue(msg -> {
                                             nowPlayingMessageId = msg.getId();
@@ -471,12 +464,9 @@ public class MusicManager {
                             }
                         });
             } else {
-                net.dv8tion.jda.api.utils.messages.MessageCreateData createData = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder()
-                        .setContent("")
+                channel.sendMessage("")
                         .setComponents(container)
                         .setAllowedMentions(java.util.Collections.emptyList())
-                        .build();
-                channel.sendMessage(createData)
                         .useComponentsV2()
                         .queue(msg -> {
                             nowPlayingMessageId = msg.getId();
