@@ -443,15 +443,11 @@ public class MusicManager {
         }
     }
 
-    private boolean toggleSpace = false;
-
     private void finalizeNowPlayingMessage(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel channel,
             net.dv8tion.jda.api.components.container.Container container) {
         try {
             if (nowPlayingMessageId != null) {
-                toggleSpace = !toggleSpace;
-                String magicContent = toggleSpace ? "\u200B" : "\u200C";
-                channel.editMessageById(nowPlayingMessageId, magicContent)
+                channel.editMessageById(nowPlayingMessageId, "")
                         .setReplace(true)
                         .setComponents(container)
                         .setAllowedMentions(java.util.Collections.emptyList())
@@ -459,7 +455,7 @@ public class MusicManager {
                         .queue(success -> isSendingNowPlaying = false, e -> {
                             nowPlayingMessageId = null;
                             try {
-                                channel.sendMessage(magicContent)
+                                channel.sendMessage("")
                                         .setComponents(container)
                                         .setAllowedMentions(java.util.Collections.emptyList())
                                         .useComponentsV2()
@@ -472,9 +468,7 @@ public class MusicManager {
                             }
                         });
             } else {
-                toggleSpace = !toggleSpace;
-                String magicContent = toggleSpace ? "\u200B" : "\u200C";
-                channel.sendMessage(magicContent)
+                channel.sendMessage("")
                         .setComponents(container)
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .useComponentsV2()
