@@ -47,7 +47,7 @@ public class PlayerManager {
                 com.sedmelluq.discord.lavaplayer.player.AudioConfiguration.ResamplingQuality.HIGH);
         playerManager.getConfiguration().setOpusEncodingQuality(10);
         playerManager.getConfiguration().setFilterHotSwapEnabled(true);
-        playerManager.setFrameBufferDuration(5000);
+        playerManager.setFrameBufferDuration(1000);
 
         // --- Register YouTube Source (v2) ---
         YoutubeAudioSourceManager youtube = new YoutubeAudioSourceManager(true);

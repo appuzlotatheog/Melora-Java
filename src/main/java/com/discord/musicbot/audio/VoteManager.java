@@ -53,6 +53,7 @@ public class VoteManager {
     }
 
     public int getActiveListenersCount(Guild guild) {
+        if (guild.getSelfMember().getVoiceState() == null) return 0;
         AudioChannel channel = guild.getSelfMember().getVoiceState().getChannel();
         if (channel == null) return 0;
 
@@ -107,10 +108,12 @@ public class VoteManager {
             return;
         }
 
-        AudioChannel botChannel = event.getGuild().getSelfMember().getVoiceState().getChannel();
-        AudioChannel userChannel = event.getMember().getVoiceState().getChannel();
+        AudioChannel botChannel = event.getGuild().getSelfMember().getVoiceState() != null
+                ? event.getGuild().getSelfMember().getVoiceState().getChannel() : null;
+        AudioChannel userChannel = event.getMember().getVoiceState() != null
+                ? event.getMember().getVoiceState().getChannel() : null;
 
-        if (botChannel == null || !botChannel.equals(userChannel)) {
+        if (botChannel == null || userChannel == null || !botChannel.equals(userChannel)) {
             event.reply("You must be in the same voice channel to vote.").setEphemeral(true).queue();
             return;
         }

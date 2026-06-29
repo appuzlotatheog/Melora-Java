@@ -26,14 +26,16 @@ public class BotCommandHandler extends ListenerAdapter {
         AutocompleteHandler.handle(event);
     }
 
+    private final java.util.concurrent.ExecutorService interactionExecutor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
-        InteractionHandler.handleButton(event);
+        interactionExecutor.execute(() -> InteractionHandler.handleButton(event));
     }
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        InteractionHandler.handleSelectMenu(event);
+        interactionExecutor.execute(() -> InteractionHandler.handleSelectMenu(event));
     }
 
     @Override
@@ -48,7 +50,7 @@ public class BotCommandHandler extends ListenerAdapter {
                 .setDescription("use `/play` or `/help` to know about me!!")
                 .build();
 
-        event.getMessage().replyEmbeds(embed)
+        event.getChannel().sendMessageEmbeds(embed)
              .setComponents(net.dv8tion.jda.api.components.actionrow.ActionRow.of(
                      net.dv8tion.jda.api.components.buttons.Button.link("https://melora-info.vercel.app", "Website")
              ))

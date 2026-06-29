@@ -16,6 +16,7 @@ public class CommandRegistry {
     private static final Logger logger = LoggerFactory.getLogger(CommandRegistry.class);
     private final Map<String, SlashCommand> commands = new HashMap<>();
     private final Map<Long, Long> cooldowns = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ExecutorService commandExecutor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
 
     public CommandRegistry() {
         java.util.concurrent.ScheduledExecutorService executor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
@@ -89,16 +90,22 @@ public class CommandRegistry {
             if (cmd.requiresDj() && !checkDjRole(ctx)) return;
             if (cmd.requiresVoice() && !checkVoiceState(ctx, cmd.requiresBotInVoice(), cmd.requiresSameChannel())) return;
 
-            cmd.execute(ctx);
-        } catch (Exception e) {
-            logger.error("Error executing command: {}", cmd.getName(), e);
-            try {
-                if (event.isAcknowledged()) {
-                    event.getHook().sendMessage("An error occurred while executing the command.").setEphemeral(true).queue();
-                } else {
-                    event.reply("An error occurred while executing the command.").setEphemeral(true).queue();
+            commandExecutor.execute(() -> {
+                try {
+                    cmd.execute(ctx);
+                } catch (Exception e) {
+                    logger.error("Error executing command: {}", cmd.getName(), e);
+                    try {
+                        if (event.isAcknowledged()) {
+                            event.getHook().sendMessage("An error occurred while executing the command.").setEphemeral(true).queue();
+                        } else {
+                            event.reply("An error occurred while executing the command.").setEphemeral(true).queue();
+                        }
+                    } catch (Exception ignored) {}
                 }
-            } catch (Exception ignored) {}
+            });
+        } catch (Exception e) {
+            logger.error("Error initiating command execution: {}", cmd.getName(), e);
         }
     }
 

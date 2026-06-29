@@ -537,7 +537,7 @@ public class MusicManager {
         }
 
         StringBuilder footer = new StringBuilder();
-        footer.append(String.format("-# Vol: %d%% | Loop: %s", player.getVolume(), loopStr));
+        footer.append(String.format("Vol: %d%% | Loop: %s", player.getVolume(), loopStr));
         if (this.is247()) {
             footer.append(" | 24/7: On");
         }
@@ -545,7 +545,6 @@ public class MusicManager {
         
         net.dv8tion.jda.api.EmbedBuilder eb = new net.dv8tion.jda.api.EmbedBuilder();
         eb.setAuthor(authorName + " | " + status, null, guild.getJDA().getSelfUser().getAvatarUrl());
-        eb.setTitle(title, track.getInfo().uri);
         eb.setDescription(desc);
         eb.setThumbnail(getArtworkUrl(track));
         eb.setFooter(footer.toString());
