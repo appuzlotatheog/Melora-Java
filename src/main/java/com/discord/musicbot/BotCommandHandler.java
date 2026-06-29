@@ -46,7 +46,7 @@ public class BotCommandHandler extends ListenerAdapter {
                 net.dv8tion.jda.api.components.section.Section.of(
                         net.dv8tion.jda.api.components.thumbnail.Thumbnail.fromUrl(event.getJDA().getSelfUser().getEffectiveAvatarUrl()),
                         net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("### Hi! I am " + event.getJDA().getSelfUser().getName()),
-                        net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("I am a high-quality music bot. Just use `/play` to start listening or `/help` to see all commands.")
+                        net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("use `/play` or `/help` to know about me!!")
                 ),
                 net.dv8tion.jda.api.components.actionrow.ActionRow.of(
                         net.dv8tion.jda.api.components.buttons.Button.link("https://melora-info.vercel.app", "Website")

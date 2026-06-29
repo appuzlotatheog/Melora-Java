@@ -364,8 +364,10 @@ public class InteractionHandler {
                 } else {
                     manager.getScheduler().pause();
                 }
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(EmbedHelper.createNowPlayingComponents(manager))
+                event.editMessage("")
+                        .setComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
+                        .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
             case "np_skip":
@@ -392,8 +394,10 @@ public class InteractionHandler {
                 break;
             case "np_loop":
                 manager.getScheduler().cycleLoopMode();
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(EmbedHelper.createNowPlayingComponents(manager))
+                event.editMessage("")
+                        .setComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
+                        .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
             case "np_queue":
@@ -406,14 +410,18 @@ public class InteractionHandler {
                 break;
             case "np_voldown":
                 manager.getPlayer().setVolume(Math.max(1, manager.getPlayer().getVolume() - 10));
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(EmbedHelper.createNowPlayingComponents(manager))
+                event.editMessage("")
+                        .setComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
+                        .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
             case "np_volup":
                 manager.getPlayer().setVolume(Math.min(200, manager.getPlayer().getVolume() + 10));
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(EmbedHelper.createNowPlayingComponents(manager))
+                event.editMessage("")
+                        .setComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
+                        .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
             case "np_stop":

@@ -389,12 +389,9 @@ public class MusicManager {
             return;
 
         final net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel finalChannel = channel;
-        net.dv8tion.jda.api.entities.MessageEmbed embed = createNowPlayingEmbed();
-        if (embed == null)
+        net.dv8tion.jda.api.components.container.Container container = createNowPlayingContainer();
+        if (container == null)
             return;
-
-        List<net.dv8tion.jda.api.components.actionrow.ActionRow> components = com.discord.musicbot.commands.framework.EmbedHelper
-                .createNowPlayingComponents(this);
 
         isSendingNowPlaying = true;
 
@@ -413,18 +410,18 @@ public class MusicManager {
                 finalChannel.getHistory().retrievePast(10).queue(messages -> {
                     try {
                         for (net.dv8tion.jda.api.entities.Message msg : messages) {
-                            if (msg.getAuthor().equals(guild.getJDA().getSelfUser()) && !msg.getEmbeds().isEmpty()) {
+                            if (msg.getAuthor().equals(guild.getJDA().getSelfUser()) && msg.getFlags().contains(net.dv8tion.jda.api.entities.Message.MessageFlag.IS_COMPONENTS_V2)) {
                                 nowPlayingMessageId = msg.getId();
                                 break;
                             }
                         }
-                        finalizeNowPlayingMessage(finalChannel, embed, components);
+                        finalizeNowPlayingMessage(finalChannel, container);
                     } catch (Exception ex) {
                         isSendingNowPlaying = false;
                     }
                 }, e -> {
                     try {
-                        finalizeNowPlayingMessage(finalChannel, embed, components);
+                        finalizeNowPlayingMessage(finalChannel, container);
                     } catch (Exception ex) {
                         isSendingNowPlaying = false;
                     }
@@ -436,24 +433,35 @@ public class MusicManager {
         }
 
         try {
-            finalizeNowPlayingMessage(finalChannel, embed, components);
+            finalizeNowPlayingMessage(finalChannel, container);
         } catch (Exception e) {
             isSendingNowPlaying = false;
         }
     }
 
     private void finalizeNowPlayingMessage(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel channel,
-            net.dv8tion.jda.api.entities.MessageEmbed embed,
-            List<net.dv8tion.jda.api.components.actionrow.ActionRow> components) {
+            net.dv8tion.jda.api.components.container.Container container) {
         try {
             if (nowPlayingMessageId != null) {
-                channel.editMessageEmbedsById(nowPlayingMessageId, embed)
-                        .setComponents(components)
+                net.dv8tion.jda.api.utils.messages.MessageEditData editData = new net.dv8tion.jda.api.utils.messages.MessageEditBuilder()
+                        .setReplace(true)
+                        .setContent("")
+                        .setComponents(container)
+                        .setAllowedMentions(java.util.Collections.emptyList())
+                        .build();
+
+                channel.editMessageById(nowPlayingMessageId, editData)
+                        .useComponentsV2()
                         .queue(success -> isSendingNowPlaying = false, e -> {
                             nowPlayingMessageId = null;
                             try {
-                                channel.sendMessageEmbeds(embed)
-                                        .setComponents(components)
+                                net.dv8tion.jda.api.utils.messages.MessageCreateData createData = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder()
+                                        .setContent("")
+                                        .setComponents(container)
+                                        .setAllowedMentions(java.util.Collections.emptyList())
+                                        .build();
+                                channel.sendMessage(createData)
+                                        .useComponentsV2()
                                         .queue(msg -> {
                                             nowPlayingMessageId = msg.getId();
                                             isSendingNowPlaying = false;
@@ -463,8 +471,13 @@ public class MusicManager {
                             }
                         });
             } else {
-                channel.sendMessageEmbeds(embed)
-                        .setComponents(components)
+                net.dv8tion.jda.api.utils.messages.MessageCreateData createData = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder()
+                        .setContent("")
+                        .setComponents(container)
+                        .setAllowedMentions(java.util.Collections.emptyList())
+                        .build();
+                channel.sendMessage(createData)
+                        .useComponentsV2()
                         .queue(msg -> {
                             nowPlayingMessageId = msg.getId();
                             isSendingNowPlaying = false;
@@ -475,7 +488,7 @@ public class MusicManager {
         }
     }
 
-    public net.dv8tion.jda.api.entities.MessageEmbed createNowPlayingEmbed() {
+    public net.dv8tion.jda.api.components.container.Container createNowPlayingContainer() {
         AudioTrack track = scheduler.getCurrentTrack();
         if (track == null)
             return null;
@@ -511,11 +524,7 @@ public class MusicManager {
             }
         }
 
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(0x2f3136);
         String authorName = isMewsic ? "Mewsic" : guild.getJDA().getSelfUser().getName();
-        String avatarUrl = isMewsic ? "https://cdn.discordapp.com/attachments/1438305127898550342/1519635008686391435/mewsic.png?ex=6a3e45e3&is=6a3cf463&hm=3b6da7f8e57917e7acd32b900182cb31cded451961c3c114c08e9ceadcb5e185&" : guild.getJDA().getSelfUser().getAvatarUrl();
-        embed.setAuthor(authorName + " | " + status, null, avatarUrl);
 
         String desc = String.format(
                 "**[%s](%s)**\n" + com.discord.musicbot.config.EmojiConfig.getInstance().queuedBy + " **Queued by:** %s\n" + com.discord.musicbot.config.EmojiConfig.getInstance().duration + " **Duration:** **%s**",
@@ -523,8 +532,6 @@ public class MusicManager {
         if (karaokeMode && lastKaraokeLine != null) {
             desc += "\n\n**Karaoke:**\n*" + lastKaraokeLine + "*";
         }
-        embed.setDescription(desc);
-        embed.setThumbnail(getArtworkUrl(track));
 
         String loopModeStr = scheduler.getLoopMode().name().charAt(0)
                 + scheduler.getLoopMode().name().substring(1).toLowerCase();
@@ -534,15 +541,27 @@ public class MusicManager {
         }
 
         StringBuilder footer = new StringBuilder();
-        footer.append(String.format("Vol: %d%% | Loop: %s", player.getVolume(), loopStr));
+        footer.append(String.format("-# Vol: %d%% | Loop: %s", player.getVolume(), loopStr));
         if (this.is247()) {
             footer.append(" | 24/7: On");
         }
         footer.append(String.format(" | Queue: %d tracks", scheduler.getQueue().size()));
         
-        embed.setFooter(footer.toString());
+        java.util.List<net.dv8tion.jda.api.components.container.ContainerChildComponent> containerComponents = new java.util.ArrayList<>();
+        
+        containerComponents.add(
+            net.dv8tion.jda.api.components.section.Section.of(
+                net.dv8tion.jda.api.components.thumbnail.Thumbnail.fromUrl(getArtworkUrl(track)),
+                net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("### " + authorName + " | " + status),
+                net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(desc),
+                net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(footer.toString())
+            )
+        );
+        
+        containerComponents.addAll(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(this));
 
-        return embed.build();
+        return net.dv8tion.jda.api.components.container.Container.of(containerComponents)
+                .withAccentColor(new java.awt.Color(0x2f3136));
     }
 
     // --- Alone Mode Logic ---
@@ -967,6 +986,12 @@ public class MusicManager {
      * Graceful cleanup for bot shutdown.
      */
     public void cleanup() {
+        try {
+            notifySessionChanged(); // Force save before shutdown (must be done before closeAudioConnection)
+        } catch (Exception e) {
+            logger.warn("Failed to force save session: {}", e.getMessage());
+        }
+
         // Clear Voice Channel Status with a timeout
         try {
             var voiceState = guild.getSelfMember().getVoiceState();
@@ -991,10 +1016,6 @@ public class MusicManager {
         } catch (Exception e) {
             logger.warn("Failed to delete NP message on shutdown: {}", e.getMessage());
         }
-
-        try {
-            notifySessionChanged(); // Force save before shutdown
-        } catch (Exception ignored) {}
 
         try {
             if (guild.getAudioManager().isConnected()) {
