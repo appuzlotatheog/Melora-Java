@@ -420,11 +420,8 @@ public class MusicManager {
             net.dv8tion.jda.api.entities.MessageEmbed embed) {
         try {
             if (nowPlayingMessageId != null) {
-                channel.editMessageById(nowPlayingMessageId, "")
-                        .setReplace(true)
-                        .setEmbeds(embed)
+                channel.editMessageEmbedsById(nowPlayingMessageId, embed)
                         .setComponents(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(this))
-                        .setAllowedMentions(java.util.Collections.emptyList())
                         .queue(success -> isSendingNowPlaying = false, e -> {
                             nowPlayingMessageId = null;
                             try {
@@ -529,11 +526,6 @@ public class MusicManager {
     // --- Alone Mode Logic ---
 
     public void onBotAlone() {
-        if (mode247) {
-            logger.info("Bot is alone but 24/7 mode is on. Ignoring.");
-            return;
-        }
-
         logger.info("Bot is alone in voice channel. Scheduling 3 minute timeout action.");
 
         // Cancel any existing alone timer first
@@ -549,21 +541,39 @@ public class MusicManager {
                 scheduler.pause();
             }
             
-            // Edit existing now playing embed to show paused state
-            updateNowPlayingMessage();
-            updateVoiceChannelStatus("Paused song");
+            // Update now playing embed and voice channel status
+            sendNowPlayingMessage(false, null);
+            updateVoiceChannelStatus();
         }
 
         aloneTask = PlayerManager.scheduledExecutor.schedule(() -> {
             try {
                 boolean isPlayingOrQueued = scheduler.getCurrentTrack() != null || !scheduler.getQueue().isEmpty();
                 
-                logger.info("Alone timeout reached for guild: {}", guild.getName());
-                if (isPlayingOrQueued) {
-                    sendSimpleEmbed(com.discord.musicbot.commands.framework.EmbedHelper.MSG_STOP
-                            + " Disconnected because I was left alone for 3 minutes.");
+                if (mode247) {
+                    if (isPlayingOrQueued) {
+                        logger.info("Alone timeout reached (24/7 mode) for guild: {}", guild.getName());
+                        com.discord.musicbot.data.model.GuildSettings settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guild.getId());
+                        if (settings.isMode247Locked()) {
+                            logger.info("Alone timeout reached (24/7 mode) for guild: {} - Session is LOCKED, ignoring.", guild.getName());
+                        } else {
+                            sendSimpleEmbed(com.discord.musicbot.commands.framework.EmbedHelper.MSG_STOP
+                                    + " Stopped playback and cleared the queue because I was left alone for 3 minutes.");
+                            scheduler.getQueue().clear();
+                            scheduler.stop();
+                            updateVoiceChannelStatus();
+                        }
+                    } else {
+                        logger.info("Alone timeout reached (24/7 mode) for guild: {} - Already stopped, staying quiet.", guild.getName());
+                    }
+                } else {
+                    logger.info("Alone timeout reached for guild: {}", guild.getName());
+                    if (isPlayingOrQueued) {
+                        sendSimpleEmbed(com.discord.musicbot.commands.framework.EmbedHelper.MSG_STOP
+                                + " Disconnected because I was left alone for 3 minutes.");
+                    }
+                    disconnect();
                 }
-                disconnect();
             } catch (Exception e) {
                 logger.error("Error in alone task", e);
             }
@@ -581,12 +591,9 @@ public class MusicManager {
             scheduler.resume();
             wasAlonePaused = false;
             
-            // Edit existing now playing embed to show resumed state
-            updateNowPlayingMessage();
-            AudioTrack current = scheduler.getCurrentTrack();
-            if (current != null) {
-                updateVoiceChannelStatus(com.discord.musicbot.config.EmojiConfig.getInstance().music + " " + current.getInfo().title);
-            }
+            // Update now playing embed and voice channel status
+            sendNowPlayingMessage(false, null);
+            updateVoiceChannelStatus();
         }
     }
 
