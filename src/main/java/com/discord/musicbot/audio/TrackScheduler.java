@@ -735,16 +735,19 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void pause() {
-        if (!player.isPaused()) {
-            player.setPaused(true);
+        AudioPlayer active = getActivePlayer();
+        if (!active.isPaused()) {
+            active.setPaused(true);
         }
     }
 
     public void resume() {
-        if (player.isPaused()) {
-            player.setPaused(false);
+        AudioPlayer active = getActivePlayer();
+        if (active.isPaused()) {
+            active.setPaused(false);
         }
     }
+
 
     public boolean isPaused() {
         return getActivePlayer().isPaused();
