@@ -11,6 +11,9 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
+
 import java.util.List;
 
 public class InteractionHandler {
@@ -373,8 +376,8 @@ public class InteractionHandler {
                 } else {
                     manager.getScheduler().pause();
                 }
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(manager))
+                event.editComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
@@ -402,8 +405,8 @@ public class InteractionHandler {
                 break;
             case "np_loop":
                 manager.getScheduler().cycleLoopMode();
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(manager))
+                event.editComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
@@ -417,15 +420,15 @@ public class InteractionHandler {
                 break;
             case "np_voldown":
                 manager.getPlayer().setVolume(Math.max(1, manager.getPlayer().getVolume() - 10));
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(manager))
+                event.editComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
             case "np_volup":
                 manager.getPlayer().setVolume(Math.min(200, manager.getPlayer().getVolume() + 10));
-                event.editMessageEmbeds(manager.createNowPlayingEmbed())
-                        .setComponents(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(manager))
+                event.editComponents(manager.createNowPlayingContainer())
+                        .useComponentsV2()
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .queue();
                 break;
@@ -508,11 +511,10 @@ public class InteractionHandler {
                 manager.getScheduler().queue(selected);
                 manager.updateNowPlayingMessage();
                 
-                event.editMessageEmbeds(new net.dv8tion.jda.api.EmbedBuilder()
-                    .setColor(new java.awt.Color(EmbedHelper.COLOR_MAIN))
-                    .setDescription(EmbedHelper.MSG_SUCCESS + " Added **[" + EmbedHelper.escapeMarkdown(selected.getInfo().title) + "](" + selected.getInfo().uri + ")** to the queue.")
-                    .build())
-                    .setComponents()
+                event.editComponents(Container.of(
+                    TextDisplay.of(EmbedHelper.MSG_SUCCESS + " Added **[" + EmbedHelper.escapeMarkdown(selected.getInfo().title) + "](" + selected.getInfo().uri + ")** to the queue.")
+                ))
+                    .useComponentsV2()
                     .queue();
             }
         } catch (Exception e) {

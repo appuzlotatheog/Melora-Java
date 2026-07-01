@@ -13,7 +13,8 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.utils.FileUpload;
-import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -75,10 +76,6 @@ public class QueueCommand extends SlashCommand {
         String query = ctx.getOption("query").getAsString().toLowerCase();
         List<AudioTrack> queue = ctx.getScheduler().getQueue();
         
-        EmbedBuilder eb = new EmbedBuilder();
-        eb.setTitle("Search Results in Queue");
-        eb.setColor(EmbedHelper.COLOR_MAIN);
-        
         StringBuilder sb = new StringBuilder();
         int count = 0;
         for (int i = 0; i < queue.size(); i++) {
@@ -90,13 +87,14 @@ public class QueueCommand extends SlashCommand {
             }
         }
         
-        if (count == 0) eb.setDescription("No tracks matched your query.");
+        String content;
+        if (count == 0) content = "### Search Results in Queue\nNo tracks matched your query.";
         else {
             if (count >= 15) sb.append("*...and more*");
-            eb.setDescription(sb.toString());
+            content = "### Search Results in Queue\n" + sb.toString();
         }
         
-        ctx.getEvent().replyEmbeds(eb.build()).queue();
+        ctx.getEvent().replyComponents(Container.of(TextDisplay.of(content))).useComponentsV2().queue();
     }
 
     private void handleDeduplicate(CommandContext ctx) {
@@ -134,10 +132,6 @@ public class QueueCommand extends SlashCommand {
             return;
         }
         
-        EmbedBuilder eb = new EmbedBuilder();
-        eb.setTitle("Queue Slice (" + start + " to " + end + ")");
-        eb.setColor(EmbedHelper.COLOR_MAIN);
-        
         StringBuilder sb = new StringBuilder();
         for (int i = start - 1; i < Math.min(end, start + 14); i++) {
             AudioTrack t = queue.get(i);
@@ -145,8 +139,7 @@ public class QueueCommand extends SlashCommand {
         }
         if (end - start > 14) sb.append("*...and more*");
         
-        eb.setDescription(sb.toString());
-        ctx.getEvent().replyEmbeds(eb.build()).queue();
+        ctx.getEvent().replyComponents(Container.of(TextDisplay.of("### Queue Slice (" + start + " to " + end + ")\n" + sb.toString()))).useComponentsV2().queue();
     }
 
     private void handleShuffleFrom(CommandContext ctx) {

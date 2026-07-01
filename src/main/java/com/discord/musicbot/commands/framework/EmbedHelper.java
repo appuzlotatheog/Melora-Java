@@ -14,6 +14,8 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -419,6 +421,12 @@ public class EmbedHelper {
         return embed.build();
     }
 
+    public static Container createCommandHelpContainer(String commandName, String prefix, JDA jda) {
+        MessageEmbed embed = createCommandHelpEmbed(commandName, prefix, jda);
+        String title = embed.getTitle() != null ? embed.getTitle() : "Command: " + commandName;
+        return Container.of(TextDisplay.of("### " + title + "\n" + embed.getDescription()));
+    }
+
     public static ActionRow createHelpMenu() {
         StringSelectMenu menu = StringSelectMenu.create("help_menu")
                 .setPlaceholder("Select a category")
@@ -576,6 +584,20 @@ public class EmbedHelper {
 
         embed.setDescription(desc.toString());
         return embed.build();
+    }
+
+    public static Container createPlaylistInfoContainer(PlaylistData playlist) {
+        String title = playlist.isFavorites() ? "Favorites Info" : playlist.getName();
+        StringBuilder desc = new StringBuilder();
+        desc.append("### ").append(title).append("\n");
+        if (!playlist.isFavorites()) {
+            desc.append("**Owner:** <@").append(playlist.getUserId()).append(">\n");
+        }
+        desc.append("**Tracks:** ").append(playlist.getTracks().size()).append("\n");
+        desc.append("**Duration:** ").append(formatDuration(playlist.getTotalDuration())).append("\n");
+        desc.append("**Created:** <t:").append(playlist.getCreatedAt() / 1000).append(":R>\n");
+        desc.append("**Updated:** <t:").append(playlist.getUpdatedAt() / 1000).append(":R>");
+        return Container.of(TextDisplay.of(desc.toString()));
     }
 
     public static List<String> splitLyrics(String lyrics) {

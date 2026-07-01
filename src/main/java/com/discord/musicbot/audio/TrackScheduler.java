@@ -243,6 +243,12 @@ public class TrackScheduler extends AudioEventAdapter {
         musicManager.notifySessionChanged();
     }
 
+    public void restoreCurrentTrack(AudioTrack track) {
+        this.currentTrack = track;
+        getActivePlayer().startTrack(track, false);
+        musicManager.cancelIdleTimeout();
+    }
+
     public void nextTrack() {
         playbackGeneration.incrementAndGet();
         if (currentTrack != null) {
@@ -832,7 +838,13 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void cleanup() {
-        stop();
+        if (player != null) {
+            player.stopTrack();
+        }
+        if (secondaryPlayer != null) {
+            secondaryPlayer.stopTrack();
+        }
+        cancelPreload();
         if (crossfadeTask != null) {
             crossfadeTask.cancel(true);
         }

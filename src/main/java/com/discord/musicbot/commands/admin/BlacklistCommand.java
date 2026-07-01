@@ -5,14 +5,14 @@ import com.discord.musicbot.commands.framework.CommandContext;
 import com.discord.musicbot.commands.framework.SlashCommand;
 import com.discord.musicbot.data.GuildSettingsManager;
 import com.discord.musicbot.data.model.GuildSettings;
-import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 
-import java.awt.Color;
 import java.util.List;
 
 public class BlacklistCommand extends SlashCommand {
@@ -63,27 +63,21 @@ public class BlacklistCommand extends SlashCommand {
                 break;
             }
             case "list": {
-                EmbedBuilder eb = new EmbedBuilder();
-                eb.setTitle("Server Blacklist");
-                eb.setColor(Color.DARK_GRAY);
-
                 StringBuilder tb = new StringBuilder();
                 int i = 1;
                 for (String t : settings.getBlacklistTracks()) tb.append(i++).append(". ").append(t).append("\n");
                 if (tb.length() == 0) tb.append("None");
-                eb.addField("Tracks", tb.toString(), false);
 
                 StringBuilder ab = new StringBuilder();
                 for (String a : settings.getBlacklistArtists()) ab.append(i++).append(". ").append(a).append("\n");
                 if (ab.length() == 0) ab.append("None");
-                eb.addField("Artists", ab.toString(), false);
 
                 StringBuilder db = new StringBuilder();
                 for (String d : settings.getBlacklistDomains()) db.append(i++).append(". ").append(d).append("\n");
                 if (db.length() == 0) db.append("None");
-                eb.addField("Domains", db.toString(), false);
 
-                ctx.getEvent().replyEmbeds(eb.build()).queue();
+                String content = "### Server Blacklist\n\n**Tracks**\n" + tb.toString() + "\n**Artists**\n" + ab.toString() + "\n**Domains**\n" + db.toString();
+                ctx.getEvent().replyComponents(Container.of(TextDisplay.of(content))).useComponentsV2().queue();
                 break;
             }
             case "remove": {

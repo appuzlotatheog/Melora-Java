@@ -16,8 +16,8 @@ public class HelpCommand extends SlashCommand {
         var commandOpt = ctx.getOption("command");
         if (commandOpt != null) {
             String commandName = commandOpt.getAsString().toLowerCase();
-            var embed = com.discord.musicbot.commands.framework.EmbedHelper.createCommandHelpEmbed(commandName, "/", ctx.getEvent().getJDA());
-            ctx.getEvent().replyEmbeds(embed).queue();
+            var container = com.discord.musicbot.commands.framework.EmbedHelper.createCommandHelpContainer(commandName, "/", ctx.getEvent().getJDA());
+            ctx.getEvent().replyComponents(container).useComponentsV2().queue();
         } else {
             var embed = com.discord.musicbot.commands.framework.EmbedHelper.createHelpEmbed("home", "/", ctx.getEvent().getJDA());
             ctx.getEvent().replyEmbeds(embed).setComponents(com.discord.musicbot.commands.framework.EmbedHelper.createHelpMenu()).queue();

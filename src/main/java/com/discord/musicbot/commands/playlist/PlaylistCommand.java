@@ -129,7 +129,7 @@ public class PlaylistCommand extends SlashCommand {
     private void handleInfo(CommandContext ctx) {
         PlaylistData pl = resolvePlaylist(ctx, "name");
         if (pl == null) return;
-        ctx.getEvent().replyEmbeds(EmbedHelper.createPlaylistInfoEmbed(pl)).queue();
+        ctx.getEvent().replyComponents(EmbedHelper.createPlaylistInfoContainer(pl)).useComponentsV2().queue();
     }
 
     private void handleTracks(CommandContext ctx) {

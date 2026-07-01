@@ -146,7 +146,7 @@ public class FavoritesCommand extends SlashCommand {
 
     private void handleInfo(CommandContext ctx) {
         PlaylistData fav = getFav(ctx);
-        ctx.getEvent().replyEmbeds(EmbedHelper.createPlaylistInfoEmbed(fav)).queue();
+        ctx.getEvent().replyComponents(EmbedHelper.createPlaylistInfoContainer(fav)).useComponentsV2().queue();
     }
 
     private void handleClear(CommandContext ctx) {
