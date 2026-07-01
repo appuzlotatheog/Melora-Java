@@ -379,7 +379,7 @@ public class InteractionHandler {
                         .queue();
                 break;
             case "np_skip":
-                if (manager.getScheduler().getQueueSize() == 0 && !manager.getScheduler().getAutoplay()) {
+                if (manager.getScheduler().getQueueSize() == 0 && !manager.getScheduler().getAutoplay() && !manager.getScheduler().isRandomPlay()) {
                     event.reply("No tracks in queue to skip to.").setEphemeral(true).queue();
                 } else {
                     event.deferEdit().queue();
