@@ -424,7 +424,7 @@ public class EmbedHelper {
     public static Container createCommandHelpContainer(String commandName, String prefix, JDA jda) {
         MessageEmbed embed = createCommandHelpEmbed(commandName, prefix, jda);
         String title = embed.getTitle() != null ? embed.getTitle() : "Command: " + commandName;
-        return Container.of(TextDisplay.of("### " + title + "\n" + embed.getDescription()));
+        return Container.of(TextDisplay.of("### " + title + "\n" + embed.getDescription())).withAccentColor(COLOR_MAIN);
     }
 
     public static ActionRow createHelpMenu() {
@@ -597,7 +597,7 @@ public class EmbedHelper {
         desc.append("**Duration:** ").append(formatDuration(playlist.getTotalDuration())).append("\n");
         desc.append("**Created:** <t:").append(playlist.getCreatedAt() / 1000).append(":R>\n");
         desc.append("**Updated:** <t:").append(playlist.getUpdatedAt() / 1000).append(":R>");
-        return Container.of(TextDisplay.of(desc.toString()));
+        return Container.of(TextDisplay.of(desc.toString())).withAccentColor(COLOR_MAIN);
     }
 
     public static List<String> splitLyrics(String lyrics) {

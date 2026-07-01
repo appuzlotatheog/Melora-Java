@@ -1,7 +1,7 @@
 package com.discord.musicbot.commands.admin;
 
 import com.discord.musicbot.commands.framework.CommandContext;
-
+import com.discord.musicbot.commands.framework.EmbedHelper;
 import com.discord.musicbot.commands.framework.SlashCommand;
 import com.discord.musicbot.data.GuildSettingsManager;
 import com.discord.musicbot.data.model.GuildSettings;
@@ -77,7 +77,7 @@ public class BlacklistCommand extends SlashCommand {
                 if (db.length() == 0) db.append("None");
 
                 String content = "### Server Blacklist\n\n**Tracks**\n" + tb.toString() + "\n**Artists**\n" + ab.toString() + "\n**Domains**\n" + db.toString();
-                ctx.getEvent().replyComponents(Container.of(TextDisplay.of(content))).useComponentsV2().queue();
+                ctx.getEvent().replyComponents(Container.of(TextDisplay.of(content)).withAccentColor(EmbedHelper.COLOR_MAIN)).useComponentsV2().queue();
                 break;
             }
             case "remove": {

@@ -513,7 +513,7 @@ public class InteractionHandler {
                 
                 event.editComponents(Container.of(
                     TextDisplay.of(EmbedHelper.MSG_SUCCESS + " Added **[" + EmbedHelper.escapeMarkdown(selected.getInfo().title) + "](" + selected.getInfo().uri + ")** to the queue.")
-                ))
+                ).withAccentColor(EmbedHelper.COLOR_MAIN))
                     .useComponentsV2()
                     .queue();
             }

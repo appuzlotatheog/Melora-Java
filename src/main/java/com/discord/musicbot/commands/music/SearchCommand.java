@@ -10,10 +10,10 @@ import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.EmbedBuilder;
-import java.awt.Color;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +37,10 @@ public class SearchCommand extends SlashCommand {
             public void trackLoaded(AudioTrack track) {
                 track.setUserData("{\"requester\":\"" + ctx.getMember().getId() + "\"}");
                 ctx.getMusicManager().getScheduler().queue(track);
-                ctx.getEvent().getHook().sendMessage(EmbedHelper.MSG_SUCCESS + " Added **" + EmbedHelper.escapeMarkdown(track.getInfo().title) + "** to the queue.").queue();
+                var container = Container.of(
+                    TextDisplay.of(EmbedHelper.MSG_SUCCESS + " Added **" + EmbedHelper.escapeMarkdown(track.getInfo().title) + "** to the queue.")
+                ).withAccentColor(EmbedHelper.COLOR_MAIN);
+                ctx.getEvent().getHook().sendMessageComponents(container).useComponentsV2().queue();
             }
 
             @Override
@@ -56,11 +59,6 @@ public class SearchCommand extends SlashCommand {
                 
                 com.discord.musicbot.audio.PlayerManager.scheduledExecutor.schedule(() -> searchCache.remove(searchId), 5, java.util.concurrent.TimeUnit.MINUTES);
 
-                EmbedBuilder eb = new EmbedBuilder();
-                eb.setColor(new Color(EmbedHelper.COLOR_MAIN));
-                eb.setTitle("Search Results for: " + query);
-                eb.setDescription("Please select a track from the dropdown menu below.");
-                
                 StringSelectMenu.Builder menuBuilder = StringSelectMenu.create("search_" + searchId + "_" + ctx.getMember().getId())
                     .setPlaceholder("Select a track to play...");
                     
@@ -73,19 +71,30 @@ public class SearchCommand extends SlashCommand {
                     menuBuilder.addOption(label, String.valueOf(i), desc);
                 }
                 
-                ctx.getEvent().getHook().sendMessageEmbeds(eb.build())
-                    .setComponents(ActionRow.of(menuBuilder.build()))
+                var container = Container.of(
+                    TextDisplay.of("### Search Results for: " + EmbedHelper.escapeMarkdown(query) + "\nPlease select a track from the dropdown menu below."),
+                    ActionRow.of(menuBuilder.build())
+                ).withAccentColor(EmbedHelper.COLOR_MAIN);
+                
+                ctx.getEvent().getHook().sendMessageComponents(container)
+                    .useComponentsV2()
                     .queue();
             }
 
             @Override
             public void noMatches() {
-                ctx.getEvent().getHook().sendMessage(EmbedHelper.MSG_ERROR + " No results found for `" + query + "`.").queue();
+                var container = Container.of(
+                    TextDisplay.of(EmbedHelper.MSG_ERROR + " No results found for `" + query + "`.")
+                ).withAccentColor(EmbedHelper.COLOR_MAIN);
+                ctx.getEvent().getHook().sendMessageComponents(container).useComponentsV2().queue();
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                ctx.getEvent().getHook().sendMessage(EmbedHelper.MSG_ERROR + " Could not search: " + exception.getMessage()).queue();
+                var container = Container.of(
+                    TextDisplay.of(EmbedHelper.MSG_ERROR + " Could not search: " + exception.getMessage())
+                ).withAccentColor(EmbedHelper.COLOR_MAIN);
+                ctx.getEvent().getHook().sendMessageComponents(container).useComponentsV2().queue();
             }
         });
     }

@@ -451,8 +451,7 @@ public class MusicManager {
             net.dv8tion.jda.api.components.container.Container container) {
         try {
             if (nowPlayingMessageId != null) {
-                channel.editMessageById(nowPlayingMessageId, "")
-                        .setComponents(container)
+                channel.editMessageComponentsById(nowPlayingMessageId, container)
                         .useComponentsV2()
                         .queue(success -> isSendingNowPlaying = false, e -> {
                             nowPlayingMessageId = null;
@@ -560,7 +559,7 @@ public class MusicManager {
         java.util.List<ActionRow> rows = com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(this);
         children.addAll(rows);
 
-        return Container.of(children);
+        return Container.of(children).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
     }
 
     public net.dv8tion.jda.api.entities.MessageEmbed createNowPlayingEmbed() {

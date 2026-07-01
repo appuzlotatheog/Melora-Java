@@ -94,7 +94,7 @@ public class QueueCommand extends SlashCommand {
             content = "### Search Results in Queue\n" + sb.toString();
         }
         
-        ctx.getEvent().replyComponents(Container.of(TextDisplay.of(content))).useComponentsV2().queue();
+        ctx.getEvent().replyComponents(Container.of(TextDisplay.of(content)).withAccentColor(EmbedHelper.COLOR_MAIN)).useComponentsV2().queue();
     }
 
     private void handleDeduplicate(CommandContext ctx) {
@@ -139,7 +139,7 @@ public class QueueCommand extends SlashCommand {
         }
         if (end - start > 14) sb.append("*...and more*");
         
-        ctx.getEvent().replyComponents(Container.of(TextDisplay.of("### Queue Slice (" + start + " to " + end + ")\n" + sb.toString()))).useComponentsV2().queue();
+        ctx.getEvent().replyComponents(Container.of(TextDisplay.of("### Queue Slice (" + start + " to " + end + ")\n" + sb.toString())).withAccentColor(EmbedHelper.COLOR_MAIN)).useComponentsV2().queue();
     }
 
     private void handleShuffleFrom(CommandContext ctx) {

@@ -3,6 +3,7 @@ package com.discord.musicbot.commands.user;
 import com.discord.musicbot.audio.DeferredTrack;
 import com.discord.musicbot.commands.framework.CommandContext;
 import com.discord.musicbot.commands.framework.SlashCommand;
+import com.discord.musicbot.commands.framework.EmbedHelper;
 import com.discord.musicbot.data.SavedQueueManager;
 import com.discord.musicbot.data.model.PlaylistTrack;
 import com.discord.musicbot.data.model.SavedQueue;
@@ -113,7 +114,7 @@ public class SavedQueueCommand extends SlashCommand {
                     sb.append("`").append(i++).append(".` **").append(sq.getName()).append("** (")
                       .append(sq.getTracks().size()).append(" tracks)\n");
                 }
-                ctx.getEvent().replyComponents(Container.of(TextDisplay.of("### Your Saved Queues\n" + sb.toString()))).useComponentsV2().queue();
+                ctx.getEvent().replyComponents(Container.of(TextDisplay.of("### Your Saved Queues\n" + sb.toString())).withAccentColor(EmbedHelper.COLOR_MAIN)).useComponentsV2().queue();
                 break;
             }
             default:
