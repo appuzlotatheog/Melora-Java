@@ -635,11 +635,10 @@ public class MusicManager {
         try {
             net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel ch = getAnnouncementChannel();
             if (ch != null) {
-                var embed = new net.dv8tion.jda.api.EmbedBuilder()
-                        .setColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN)
-                        .setDescription(message)
-                        .build();
-                ch.sendMessageEmbeds(embed).queue();
+                var container = net.dv8tion.jda.api.components.container.Container.of(
+                        net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(message)
+                ).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
+                ch.sendMessageComponents(container).useComponentsV2().queue();
             }
         } catch (Exception e) {
             logger.debug("Failed to send simple embed", e);

@@ -44,16 +44,21 @@ public class BotCommandHandler extends ListenerAdapter {
         if (!event.getMessage().getMentions().isMentioned(event.getJDA().getSelfUser(),
                 net.dv8tion.jda.api.entities.Message.MentionType.USER)) return;
 
-        net.dv8tion.jda.api.entities.MessageEmbed embed = new net.dv8tion.jda.api.EmbedBuilder()
-                .setColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN)
-                .setAuthor("Hi! I am " + event.getJDA().getSelfUser().getName(), null, event.getJDA().getSelfUser().getEffectiveAvatarUrl())
-                .setDescription("use `/play` or `/help` to know about me!!")
-                .build();
+        var section = net.dv8tion.jda.api.components.section.Section.of(
+                net.dv8tion.jda.api.components.thumbnail.Thumbnail.fromUrl(event.getJDA().getSelfUser().getEffectiveAvatarUrl()),
+                net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("### Hi! I am " + event.getJDA().getSelfUser().getName()),
+                net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("Use `/play` or `/help` to know about me!!")
+        );
 
-        event.getChannel().sendMessageEmbeds(embed)
-             .setComponents(net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                     net.dv8tion.jda.api.components.buttons.Button.link("https://melora-info.vercel.app", "Website")
-             ))
+        var container = net.dv8tion.jda.api.components.container.Container.of(
+                section,
+                net.dv8tion.jda.api.components.actionrow.ActionRow.of(
+                        net.dv8tion.jda.api.components.buttons.Button.link("https://melora-info.vercel.app", "Website")
+                )
+        ).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
+
+        event.getChannel().sendMessageComponents(container)
+             .useComponentsV2()
              .queue();
     }
 }

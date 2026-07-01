@@ -33,6 +33,7 @@ public class EmbedHelper {
     public static final String MSG_TIME = com.discord.musicbot.config.EmojiConfig.getInstance().time;
     public static final String MSG_SHUFFLE = com.discord.musicbot.config.EmojiConfig.getInstance().shuffle;
     public static final String MSG_REPEAT = com.discord.musicbot.config.EmojiConfig.getInstance().repeat;
+    public static final String BOT_LOGO_URL = "https://cdn.discordapp.com/attachments/1438305127898550342/1519635008686391435/mewsic.png?ex=6a3e45e3&is=6a3cf463&hm=3b6da7f8e57917e7acd32b900182cb31cded451961c3c114c08e9ceadcb5e185&";
 
     public static final int COLOR_MAIN;
 
@@ -233,7 +234,7 @@ public class EmbedHelper {
                 .setFooter("Slash Commands Supported");
 
         if (category.equals("home")) {
-            embed.setThumbnail("https://cdn.discordapp.com/attachments/1438305127898550342/1519635008686391435/mewsic.png?ex=6a3e45e3&is=6a3cf463&hm=3b6da7f8e57917e7acd32b900182cb31cded451961c3c114c08e9ceadcb5e185&");
+            embed.setThumbnail(BOT_LOGO_URL);
         }
 
         StringBuilder description = new StringBuilder();

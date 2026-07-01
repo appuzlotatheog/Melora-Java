@@ -6,9 +6,6 @@ import com.discord.musicbot.commands.framework.EmbedHelper;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import net.dv8tion.jda.api.EmbedBuilder;
-
-import java.awt.Color;
 
 public class GrabCommand extends SlashCommand {
     @Override
@@ -22,19 +19,23 @@ public class GrabCommand extends SlashCommand {
             return;
         }
 
-        EmbedBuilder eb = new EmbedBuilder();
-        eb.setColor(new Color(EmbedHelper.COLOR_MAIN));
-        eb.setTitle("Saved Song: " + track.getInfo().title, track.getInfo().uri);
-        eb.setAuthor(track.getInfo().author);
-        eb.addField("Duration", EmbedHelper.formatDuration(track.getDuration()), true);
-        
+        var t1 = net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("### [" + EmbedHelper.escapeMarkdown(track.getInfo().title) + "](" + track.getInfo().uri + ")");
+        var t2 = net.dv8tion.jda.api.components.textdisplay.TextDisplay.of("**Author:** " + track.getInfo().author + "\n**Duration:** " + EmbedHelper.formatDuration(track.getDuration()));
+        net.dv8tion.jda.api.components.container.Container container;
         if (track.getInfo().uri.contains("youtube.com") || track.getInfo().uri.contains("youtu.be")) {
-            eb.setThumbnail("https://img.youtube.com/vi/" + track.getIdentifier() + "/hqdefault.jpg");
+            var section = net.dv8tion.jda.api.components.section.Section.of(
+                net.dv8tion.jda.api.components.thumbnail.Thumbnail.fromUrl("https://img.youtube.com/vi/" + track.getIdentifier() + "/hqdefault.jpg"),
+                t1, t2
+            );
+            container = net.dv8tion.jda.api.components.container.Container.of(section);
+        } else {
+            container = net.dv8tion.jda.api.components.container.Container.of(t1, t2);
         }
+        final var finalContainer = container.withAccentColor(EmbedHelper.COLOR_MAIN);
 
         ctx.getMember().getUser().openPrivateChannel().queue(
             channel -> {
-                channel.sendMessageEmbeds(eb.build()).queue(
+                channel.sendMessageComponents(finalContainer).useComponentsV2().queue(
                     success -> ctx.reply(EmbedHelper.MSG_SUCCESS + " I've sent you a DM with the current song!"),
                     error -> ctx.replyError("I couldn't send you a DM. Please check your privacy settings.")
                 );
