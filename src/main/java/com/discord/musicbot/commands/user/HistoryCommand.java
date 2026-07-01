@@ -26,13 +26,8 @@ public class HistoryCommand extends SlashCommand {
                 return;
             }
 
-            int maxPages = Math.max(1, (int) Math.ceil(history.size() / 10.0));
-            net.dv8tion.jda.api.entities.MessageEmbed embed = com.discord.musicbot.commands.framework.EmbedHelper.createHistoryEmbed(history, 1);
-            ctx.getEvent().replyEmbeds(embed).setComponents(
-                net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                    com.discord.musicbot.commands.framework.EmbedHelper.createPaginationButtons("history", 1, maxPages)
-                )
-            ).queue();
+            var container = com.discord.musicbot.commands.framework.EmbedHelper.createHistoryContainer(history, 1);
+            ctx.getEvent().replyComponents(container).useComponentsV2().queue();
             return;
         }
 

@@ -166,15 +166,25 @@ public class EmbedHelper {
             trackTitle = escapeMarkdown(trackTitle);
             
             String requester = "";
+            String requesterId = null;
             Object ud = track.getUserData();
             if (ud instanceof net.dv8tion.jda.api.entities.User u) {
-                requester = " - " + u.getAsMention();
+                requesterId = u.getId();
             } else if (ud instanceof String s) {
                 if (s.contains("\"requester\":\"")) {
-                    String id = s.split("\"requester\":\"")[1].split("\"")[0];
-                    requester = " - <@" + id + ">";
+                    requesterId = s.split("\"requester\":\"")[1].split("\"")[0];
                 } else if (s.matches("\\d+")) {
-                    requester = " - <@" + s + ">";
+                    requesterId = s;
+                }
+            }
+            
+            if (requesterId != null) {
+                net.dv8tion.jda.api.entities.Member m = manager.getGuild().getMemberById(requesterId);
+                if (m != null) {
+                    requester = " - @" + m.getEffectiveName();
+                } else {
+                    net.dv8tion.jda.api.entities.User u = manager.getGuild().getJDA().getUserById(requesterId);
+                    if (u != null) requester = " - @" + u.getName();
                 }
             }
             
@@ -202,25 +212,35 @@ public class EmbedHelper {
         return buttons;
     }
 
-    public static MessageEmbed createLyricsEmbed(String query, List<String> pages, int pageNum, String source, boolean isLive) {
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(COLOR_MAIN);
-        embed.setTitle("Lyrics: " + query);
-        embed.setTimestamp(java.time.Instant.now());
-        embed.setFooter(String.format("Page %d/%d | Source: %s", pageNum, pages.size(), source));
+    public static Container createLyricsContainer(String lyricsId, String query, List<String> pages, int pageNum, String source, boolean isLive) {
+        StringBuilder content = new StringBuilder();
+        content.append("### Lyrics: ").append(query).append("\n\n");
+        content.append(pages.get(pageNum - 1));
         
-        String text = pages.get(pageNum - 1);
-        embed.setDescription(text);
-        return embed.build();
+        String footer = String.format("Page %d/%d | Source: %s", pageNum, pages.size(), source);
+        content.append("\n\n-# ").append(footer);
+
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of(content.toString()));
+        children.add(ActionRow.of(createLyricsComponents(lyricsId, pageNum, pages.size())));
+
+        return Container.of(children).withAccentColor(COLOR_MAIN);
     }
 
-    public static MessageEmbed createVoteEmbed(String type, int currentYes, int required) {
-        EmbedBuilder eb = new EmbedBuilder();
-        eb.setColor(COLOR_MAIN);
-        eb.setTitle("Vote to " + type);
-        eb.setDescription(String.format("Votes: **%d** / **%d** required", currentYes, required));
-        eb.setFooter("Vote passes when requirements are met.");
-        return eb.build();
+    public static Container createVoteContainer(String type, int currentYes, int required) {
+        StringBuilder content = new StringBuilder();
+        content.append("### Vote to ").append(type).append("\n\n");
+        content.append(String.format("Votes: **%d** / **%d** required", currentYes, required));
+        content.append("\n\n-# Vote passes when requirements are met.");
+
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of(content.toString()));
+        children.add(ActionRow.of(
+                Button.success("vote_yes", "Yes"),
+                Button.danger("vote_no", "No")
+        ));
+
+        return Container.of(children).withAccentColor(COLOR_MAIN);
     }
 
     public static List<Button> createLyricsComponents(String lyricsId, int page, int maxPages) {
@@ -467,18 +487,14 @@ public class EmbedHelper {
 
     // ======================== PLAYLIST / FAVORITES / HISTORY EMBEDS ========================
 
-    public static MessageEmbed createHistoryEmbed(java.util.List<com.discord.musicbot.data.HistoryManager.HistoryEntry> history, int page) {
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(COLOR_MAIN);
-        embed.setTitle("Your Listening History");
-
+    public static Container createHistoryContainer(java.util.List<com.discord.musicbot.data.HistoryManager.HistoryEntry> history, int page) {
         int totalTracks = history.size();
         int maxPages = Math.max(1, (int) Math.ceil(totalTracks / 10.0));
         page = Math.max(1, Math.min(page, maxPages));
 
-        embed.setFooter("Page " + page + "/" + maxPages + " | " + totalTracks + " track" + (totalTracks != 1 ? "s" : ""));
+        StringBuilder content = new StringBuilder();
+        content.append("### Your Listening History\n\n");
 
-        StringBuilder description = new StringBuilder();
         if (totalTracks > 0) {
             int start = (page - 1) * 10;
             int end = Math.min(start + 10, totalTracks);
@@ -492,25 +508,45 @@ public class EmbedHelper {
                     url = "https://www.youtube.com/results?search_query=" + java.net.URLEncoder.encode(url.substring(9), java.nio.charset.StandardCharsets.UTF_8);
                 }
                 
-                description.append(String.format("`%d.` [**%s**](%s)\n", i + 1, escapeMarkdown(title), url));
+                content.append(String.format("`%d.` [**%s**](%s)\n", i + 1, escapeMarkdown(title), url));
             }
         } else {
-            description.append("No listening history.");
+            content.append("No listening history.");
         }
 
-        embed.setDescription(description.toString());
-        return embed.build();
+        String footer = "Page " + page + "/" + maxPages + " | " + totalTracks + " track" + (totalTracks != 1 ? "s" : "");
+        content.append("\n-# ").append(footer);
+
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of(content.toString()));
+        children.add(ActionRow.of(createPaginationButtons("history", page, maxPages)));
+
+        return Container.of(children).withAccentColor(COLOR_MAIN);
     }
 
-    public static MessageEmbed createPlaylistTracksEmbed(PlaylistData playlist, int page) {
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(COLOR_MAIN);
-        embed.setTitle(playlist.isFavorites() ? "Favorites" : playlist.getName());
-
+    public static Container createPlaylistTracksContainer(PlaylistData playlist, int page, String paginationPrefix) {
         List<PlaylistTrack> tracks = playlist.getTracks();
         int totalTracks = tracks.size();
         int maxPages = Math.max(1, (int) Math.ceil(totalTracks / 10.0));
         page = Math.max(1, Math.min(page, maxPages));
+
+        StringBuilder content = new StringBuilder();
+        content.append("### ").append(playlist.isFavorites() ? "Favorites" : playlist.getName()).append("\n\n");
+
+        if (totalTracks > 0) {
+            content.append("```md\n");
+            int start = (page - 1) * 10;
+            int end = Math.min(start + 10, totalTracks);
+            for (int i = start; i < end; i++) {
+                PlaylistTrack t = tracks.get(i);
+                String title = t.getTitle();
+                if (title.length() > 50) title = title.substring(0, 47) + "...";
+                content.append(String.format("%d. %s [%s]\n", i + 1, title, formatDuration(t.getDuration())));
+            }
+            content.append("```");
+        } else {
+            content.append("No tracks");
+        }
 
         StringBuilder footer = new StringBuilder();
         footer.append("Page ").append(page).append("/").append(maxPages);
@@ -518,75 +554,46 @@ public class EmbedHelper {
             footer.append(" | ").append(totalTracks).append(" track").append(totalTracks != 1 ? "s" : "");
             footer.append(" | ").append(formatDuration(playlist.getTotalDuration())).append(" total");
         }
-        embed.setFooter(footer.toString());
+        content.append("\n-# ").append(footer);
 
-        StringBuilder description = new StringBuilder();
-        if (totalTracks > 0) {
-            description.append("```md\n");
-            int start = (page - 1) * 10;
-            int end = Math.min(start + 10, totalTracks);
-            for (int i = start; i < end; i++) {
-                PlaylistTrack t = tracks.get(i);
-                String title = t.getTitle();
-                if (title.length() > 50) title = title.substring(0, 47) + "...";
-                description.append(String.format("%d. %s [%s]\n", i + 1, title, formatDuration(t.getDuration())));
-            }
-            description.append("```");
-        } else {
-            description.append("No tracks");
-        }
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of(content.toString()));
+        children.add(ActionRow.of(createPaginationButtons(paginationPrefix, page, maxPages)));
 
-        embed.setDescription(description.toString());
-        return embed.build();
+        return Container.of(children).withAccentColor(COLOR_MAIN);
     }
 
-    public static MessageEmbed createPlaylistListEmbed(List<PlaylistData> playlists, int page) {
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(COLOR_MAIN);
-        embed.setTitle("Your Playlists");
-
+    public static Container createPlaylistListContainer(List<PlaylistData> playlists, int page, String paginationPrefix) {
         int total = playlists.size();
         int maxPages = Math.max(1, (int) Math.ceil(total / 10.0));
         page = Math.max(1, Math.min(page, maxPages));
 
-        embed.setFooter("Page " + page + "/" + maxPages + " | " + total + " playlist" + (total != 1 ? "s" : ""));
+        StringBuilder content = new StringBuilder();
+        content.append("### Your Playlists\n\n");
 
-        StringBuilder description = new StringBuilder();
         if (total > 0) {
-            description.append("```md\n");
+            content.append("```md\n");
             int start = (page - 1) * 10;
             int end = Math.min(start + 10, total);
             for (int i = start; i < end; i++) {
                 PlaylistData p = playlists.get(i);
                 String name = p.getName();
                 if (name.length() > 40) name = name.substring(0, 37) + "...";
-                description.append(String.format("%d. %s (%d tracks)\n", i + 1, name, p.getTracks().size()));
+                content.append(String.format("%d. %s (%d tracks)\n", i + 1, name, p.getTracks().size()));
             }
-            description.append("```");
+            content.append("```");
         } else {
-            description.append("No playlists. Use `/playlist create` to get started!");
+            content.append("No playlists. Use `/playlist create` to get started!");
         }
 
-        embed.setDescription(description.toString());
-        return embed.build();
-    }
+        String footer = "Page " + page + "/" + maxPages + " | " + total + " playlist" + (total != 1 ? "s" : "");
+        content.append("\n-# ").append(footer);
 
-    public static MessageEmbed createPlaylistInfoEmbed(PlaylistData playlist) {
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(COLOR_MAIN);
-        embed.setTitle(playlist.isFavorites() ? "Favorites Info" : playlist.getName());
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of(content.toString()));
+        children.add(ActionRow.of(createPaginationButtons(paginationPrefix, page, maxPages)));
 
-        StringBuilder desc = new StringBuilder();
-        if (!playlist.isFavorites()) {
-            desc.append("**Owner:** <@").append(playlist.getUserId()).append(">\n");
-        }
-        desc.append("**Tracks:** ").append(playlist.getTracks().size()).append("\n");
-        desc.append("**Duration:** ").append(formatDuration(playlist.getTotalDuration())).append("\n");
-        desc.append("**Created:** <t:").append(playlist.getCreatedAt() / 1000).append(":R>\n");
-        desc.append("**Updated:** <t:").append(playlist.getUpdatedAt() / 1000).append(":R>");
-
-        embed.setDescription(desc.toString());
-        return embed.build();
+        return Container.of(children).withAccentColor(COLOR_MAIN);
     }
 
     public static Container createPlaylistInfoContainer(PlaylistData playlist) {
@@ -634,28 +641,29 @@ public class EmbedHelper {
         return pages;
     }
 
-    public static MessageEmbed createSettingsEmbed(GuildSettings settings) {
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(COLOR_MAIN);
-        embed.setTitle(com.discord.musicbot.config.EmojiConfig.getInstance().settings + " Server Settings");
-        embed.setDescription("Manage bot configurations for this server. Use the buttons below to toggle features.");
+    public static Container createSettingsContainer(GuildSettings settings) {
+        StringBuilder desc = new StringBuilder();
+        desc.append("### ").append(com.discord.musicbot.config.EmojiConfig.getInstance().settings).append(" Server Settings\n");
+        desc.append("Manage bot configurations for this server. Use the buttons below to toggle features.\n\n");
 
         String enabledEmoji = com.discord.musicbot.config.EmojiConfig.getInstance().enabled + " Enabled";
         String disabledEmoji = com.discord.musicbot.config.EmojiConfig.getInstance().disabled + " Disabled";
 
-        embed.addField("Voice Channel Status", settings.isUpdateVcStatus() ? enabledEmoji : disabledEmoji, true);
-        embed.addField("Announce Tracks", settings.isAnnounceTracks() ? enabledEmoji : disabledEmoji, true);
-        embed.addField("Default Volume", settings.getDefaultVolume() + "%", true);
-        
-        embed.addField("24/7 Mode", settings.isMode247() ? enabledEmoji : disabledEmoji, true);
-        embed.addField("Autoplay", settings.isAutoplay() ? enabledEmoji : disabledEmoji, true);
-        embed.addField("Random Play", settings.isRandomPlay() ? enabledEmoji : disabledEmoji, true);
-        embed.addField("DJ Mode", settings.isDjMode() ? enabledEmoji : disabledEmoji, true);
-        
+        desc.append("**Voice Channel Status:** ").append(settings.isUpdateVcStatus() ? enabledEmoji : disabledEmoji).append("\n");
+        desc.append("**Announce Tracks:** ").append(settings.isAnnounceTracks() ? enabledEmoji : disabledEmoji).append("\n");
+        desc.append("**Default Volume:** ").append(settings.getDefaultVolume()).append("%\n");
+        desc.append("**24/7 Mode:** ").append(settings.isMode247() ? enabledEmoji : disabledEmoji).append("\n");
+        desc.append("**Autoplay:** ").append(settings.isAutoplay() ? enabledEmoji : disabledEmoji).append("\n");
+        desc.append("**Random Play:** ").append(settings.isRandomPlay() ? enabledEmoji : disabledEmoji).append("\n");
+        desc.append("**DJ Mode:** ").append(settings.isDjMode() ? enabledEmoji : disabledEmoji).append("\n");
         String channel = settings.getCommandChannelId() != null ? "<#" + settings.getCommandChannelId() + ">" : "Any";
-        embed.addField("Command Channel", channel, true);
+        desc.append("**Command Channel:** ").append(channel);
 
-        return embed.build();
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of(desc.toString()));
+        children.addAll(createSettingsComponents(settings));
+
+        return Container.of(children).withAccentColor(COLOR_MAIN);
     }
 
     public static List<ActionRow> createSettingsComponents(GuildSettings settings) {

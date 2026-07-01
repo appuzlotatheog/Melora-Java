@@ -496,17 +496,28 @@ public class MusicManager {
         }
 
         String requester = "Unknown";
-        if (track.getUserData() instanceof net.dv8tion.jda.api.entities.User) {
-            requester = ((net.dv8tion.jda.api.entities.User) track.getUserData()).getAsMention();
+        String requesterId = null;
+        if (track.getUserData() instanceof net.dv8tion.jda.api.entities.User u) {
+            requesterId = u.getId();
         } else if (track.getUserData() instanceof String) {
             String ud = (String) track.getUserData();
             if (ud.contains("\"requester\":\"")) {
-                String id = ud.split("\"requester\":\"")[1].split("\"")[0];
-                requester = "<@" + id + ">";
+                requesterId = ud.split("\"requester\":\"")[1].split("\"")[0];
             } else if (ud.matches("\\d+")) {
-                requester = "<@" + ud + ">";
+                requesterId = ud;
             } else {
                 requester = ud;
+            }
+        }
+
+        if (requesterId != null) {
+            net.dv8tion.jda.api.entities.Member m = guild.getMemberById(requesterId);
+            if (m != null) {
+                requester = "@" + m.getEffectiveName();
+            } else {
+                net.dv8tion.jda.api.entities.User u = guild.getJDA().getUserById(requesterId);
+                if (u != null) requester = "@" + u.getName();
+                else requester = "Unknown";
             }
         }
 
@@ -564,80 +575,6 @@ public class MusicManager {
         children.addAll(rows);
 
         return Container.of(children).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
-    }
-
-    public net.dv8tion.jda.api.entities.MessageEmbed createNowPlayingEmbed() {
-        return createNowPlayingEmbed(null);
-    }
-
-    public net.dv8tion.jda.api.entities.MessageEmbed createNowPlayingEmbed(com.sedmelluq.discord.lavaplayer.track.AudioTrack trackOverride) {
-        com.sedmelluq.discord.lavaplayer.track.AudioTrack track = trackOverride != null ? trackOverride : scheduler.getCurrentTrack();
-        if (track == null)
-            return null;
-
-        // Truncate title to 35 chars (index.js logic)
-        String title = track.getInfo().title;
-        if (title.length() > 35) {
-            title = title.substring(0, 35) + "...";
-        }
-
-        String requester = "Unknown";
-        if (track.getUserData() instanceof net.dv8tion.jda.api.entities.User) {
-            requester = ((net.dv8tion.jda.api.entities.User) track.getUserData()).getAsMention();
-        } else if (track.getUserData() instanceof String) {
-            String ud = (String) track.getUserData();
-            if (ud.contains("\"requester\":\"")) {
-                String id = ud.split("\"requester\":\"")[1].split("\"")[0];
-                requester = "<@" + id + ">";
-            } else if (ud.matches("\\d+")) {
-                requester = "<@" + ud + ">";
-            } else {
-                requester = ud;
-            }
-        }
-
-        boolean isPaused = scheduler.isPaused();
-        String status = isPaused ? "Paused" : "Playing";
-
-        boolean isMewsic = false;
-        if (track.getUserData() instanceof String udStr) {
-            if (udStr.contains("\"mewsic\":true")) {
-                isMewsic = true;
-            }
-        }
-
-        String authorName = isMewsic ? "Mewsic" : guild.getJDA().getSelfUser().getName();
-
-        String desc = String.format(
-                "**[%s](%s)**\n" + com.discord.musicbot.config.EmojiConfig.getInstance().queuedBy + " **Queued by:** %s\n" + com.discord.musicbot.config.EmojiConfig.getInstance().duration + " **Duration:** **%s**",
-                title, track.getInfo().uri, requester, formatTime(track.getDuration()));
-        if (karaokeMode && lastKaraokeLine != null) {
-            desc += "\n\n**Karaoke:**\n*" + lastKaraokeLine + "*";
-        }
-
-        String loopModeStr = scheduler.getLoopMode().name().charAt(0)
-                + scheduler.getLoopMode().name().substring(1).toLowerCase();
-        java.util.List<String> activeModes = new java.util.ArrayList<>();
-        if (!loopModeStr.equals("Off")) activeModes.add(loopModeStr);
-        if (scheduler.isAutoPlay()) activeModes.add("Autoplay");
-        if (scheduler.isRandomPlay()) activeModes.add("Random");
-        String loopStr = activeModes.isEmpty() ? "Off" : String.join(" + ", activeModes);
-
-        StringBuilder footer = new StringBuilder();
-        footer.append(String.format("Vol: %d%% | Loop: %s", player.getVolume(), loopStr));
-        if (this.is247()) {
-            footer.append(" | 24/7: On");
-        }
-        footer.append(String.format(" | Queue: %d tracks", scheduler.getQueue().size()));
-        
-        net.dv8tion.jda.api.EmbedBuilder eb = new net.dv8tion.jda.api.EmbedBuilder();
-        eb.setAuthor(authorName + " | " + status, null, guild.getJDA().getSelfUser().getAvatarUrl());
-        eb.setDescription(desc);
-        eb.setThumbnail(getArtworkUrl(track));
-        eb.setFooter(footer.toString());
-        eb.setColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
-
-        return eb.build();
     }
 
     // --- Alone Mode Logic ---
@@ -1012,6 +949,12 @@ public class MusicManager {
         if (snapshot.isPaused) {
             scheduler.pause();
         }
+        
+        // Force the Now Playing panel to re-render so the user knows it recovered
+        if (scheduler.getCurrentTrack() != null) {
+            updateNowPlayingMessage();
+        }
+        updateVoiceChannelStatus();
     }
 
     public void notifySessionChanged() {

@@ -136,12 +136,8 @@ public class FavoritesCommand extends SlashCommand {
         PlaylistData fav = getFav(ctx);
         OptionMapping pageOpt = ctx.getOption("page");
         int page = pageOpt != null ? Math.max(1, (int) pageOpt.getAsLong()) : 1;
-        var embed = EmbedHelper.createPlaylistTracksEmbed(fav, page);
-        int maxPages = Math.max(1, (int) Math.ceil(fav.getTracks().size() / 10.0));
-        ctx.getEvent().replyEmbeds(embed).setComponents(
-                net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                        EmbedHelper.createPaginationButtons("favlist_" + ctx.getUser().getId(), page, maxPages)
-                )).queue();
+        var container = EmbedHelper.createPlaylistTracksContainer(fav, page, "favlist_" + ctx.getUser().getId());
+        ctx.getEvent().replyComponents(container).useComponentsV2().queue();
     }
 
     private void handleInfo(CommandContext ctx) {

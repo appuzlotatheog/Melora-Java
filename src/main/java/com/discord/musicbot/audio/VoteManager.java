@@ -134,13 +134,14 @@ public class VoteManager {
             if (vote.timeoutTask != null) vote.timeoutTask.cancel(false);
             activeVotes.remove(guildId);
             executeVote(event.getGuild(), vote.type);
-            event.editMessage(EmbedHelper.MSG_SUCCESS + " Vote passed!")
-                 .setEmbeds().setComponents().queue();
+            event.editComponents(net.dv8tion.jda.api.components.container.Container.of(
+                    net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(EmbedHelper.MSG_SUCCESS + " Vote passed!")
+            ).withAccentColor(EmbedHelper.COLOR_MAIN)).useComponentsV2().queue();
             return;
         }
 
-        var embed = EmbedHelper.createVoteEmbed(vote.type.name(), vote.yesVotes.size(), required);
-        event.getChannel().editMessageEmbedsById(vote.messageId, embed).queue();
+        var container = EmbedHelper.createVoteContainer(vote.type.name(), vote.yesVotes.size(), required);
+        event.getChannel().editMessageComponentsById(vote.messageId, container).useComponentsV2().queue();
     }
 
     private int getThresholdForType(Guild guild, VoteType type) {

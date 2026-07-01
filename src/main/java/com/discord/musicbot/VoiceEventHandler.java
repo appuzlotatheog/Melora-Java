@@ -30,7 +30,7 @@ public class VoiceEventHandler extends ListenerAdapter {
 
         // Handle bot being kicked/disconnected
         if (event.getMember().equals(guild.getSelfMember())) {
-            if (PlayerManager.isShuttingDown) {
+            if (PlayerManager.isShuttingDown || event.getJDA().getStatus() == net.dv8tion.jda.api.JDA.Status.SHUTTING_DOWN || event.getJDA().getStatus() == net.dv8tion.jda.api.JDA.Status.SHUTDOWN) {
                 return; // Ignore disconnects during shutdown sequence
             }
 

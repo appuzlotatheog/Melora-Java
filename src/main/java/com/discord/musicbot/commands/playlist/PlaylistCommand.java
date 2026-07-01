@@ -118,12 +118,8 @@ public class PlaylistCommand extends SlashCommand {
         OptionMapping pageOpt = ctx.getOption("page");
         int page = pageOpt != null ? Math.max(1, (int) pageOpt.getAsLong()) : 1;
         List<PlaylistData> playlists = PlaylistManager.getInstance().getPlaylists(ctx.getUser().getId());
-        var embed = EmbedHelper.createPlaylistListEmbed(playlists, page);
-        int maxPages = Math.max(1, (int) Math.ceil(playlists.size() / 10.0));
-        ctx.getEvent().replyEmbeds(embed).setComponents(
-                net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                        EmbedHelper.createPaginationButtons("pllist", page, maxPages)
-                )).queue();
+        var container = EmbedHelper.createPlaylistListContainer(playlists, page, "pllist");
+        ctx.getEvent().replyComponents(container).useComponentsV2().queue();
     }
 
     private void handleInfo(CommandContext ctx) {
@@ -137,12 +133,8 @@ public class PlaylistCommand extends SlashCommand {
         if (pl == null) return;
         OptionMapping pageOpt = ctx.getOption("page");
         int page = pageOpt != null ? Math.max(1, (int) pageOpt.getAsLong()) : 1;
-        var embed = EmbedHelper.createPlaylistTracksEmbed(pl, page);
-        int maxPages = Math.max(1, (int) Math.ceil(pl.getTracks().size() / 10.0));
-        ctx.getEvent().replyEmbeds(embed).setComponents(
-                net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                        EmbedHelper.createPaginationButtons("pltracks_" + pl.getId() + "_" + ctx.getUser().getId(), page, maxPages)
-                )).queue();
+        var container = EmbedHelper.createPlaylistTracksContainer(pl, page, "pltracks_" + pl.getId() + "_" + ctx.getUser().getId());
+        ctx.getEvent().replyComponents(container).useComponentsV2().queue();
     }
 
     // ======================== TRACK MANAGEMENT ========================

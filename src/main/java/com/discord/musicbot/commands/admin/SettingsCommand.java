@@ -39,8 +39,8 @@ public class SettingsCommand extends SlashCommand {
 
         GuildSettings settings = GuildSettingsManager.getInstance().getSettings(ctx.getEvent().getGuild().getId());
 
-        ctx.getEvent().replyEmbeds(EmbedHelper.createSettingsEmbed(settings))
-                .setComponents(EmbedHelper.createSettingsComponents(settings))
+        ctx.getEvent().replyComponents(EmbedHelper.createSettingsContainer(settings))
+                .useComponentsV2()
                 .setEphemeral(true)
                 .queue();
     }

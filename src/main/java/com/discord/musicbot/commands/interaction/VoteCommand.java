@@ -43,12 +43,9 @@ public class VoteCommand extends SlashCommand {
             ctx.replySuccess("Vote automatically passed (Not enough listeners to require a vote).");
         } else if ("started".equals(result)) {
             int required = (int) Math.ceil((VoteManager.getInstance().getActiveListenersCount(ctx.getGuild()) * defaultThreshold) / 100.0);
-            net.dv8tion.jda.api.entities.MessageEmbed embed = EmbedHelper.createVoteEmbed(type.name(), 1, required);
+            var container = EmbedHelper.createVoteContainer(type.name(), 1, required);
             
-            ctx.getEvent().replyEmbeds(embed).setComponents(net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                   net.dv8tion.jda.api.components.buttons.Button.success("vote_yes", "Yes"),
-                   net.dv8tion.jda.api.components.buttons.Button.danger("vote_no", "No")
-            )).queue(hook -> {
+            ctx.getEvent().replyComponents(container).useComponentsV2().queue(hook -> {
                    hook.retrieveOriginal().queue(msg -> {
                        VoteManager.getInstance().registerVoteMessage(ctx.getGuild().getId(), msg.getChannel().getId(), msg.getId());
                    });

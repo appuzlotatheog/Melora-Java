@@ -114,11 +114,7 @@ public class InteractionHandler {
 
         com.discord.musicbot.data.GuildSettingsManager.getInstance().markDirty();
 
-        event.deferEdit().queue(v -> {
-            event.getHook().editOriginalEmbeds(EmbedHelper.createSettingsEmbed(settings))
-                    .setComponents(EmbedHelper.createSettingsComponents(settings))
-                    .queue();
-        });
+        event.editComponents(EmbedHelper.createSettingsContainer(settings)).useComponentsV2().queue();
     }
 
     private static void handlePlaylistButtons(ButtonInteractionEvent event, String id) {
@@ -217,11 +213,8 @@ public class InteractionHandler {
                 List<PlaylistData> playlists = PlaylistManager.getInstance().getPlaylists(ownerUserId);
                 int maxPages = Math.max(1, (int) Math.ceil(playlists.size() / 10.0));
                 int newPage = calcNewPage(action, currentPage, maxPages);
-                MessageEmbed embed = EmbedHelper.createPlaylistListEmbed(playlists, newPage);
-                event.deferEdit().queue(v -> event.getHook().editOriginalEmbeds(embed).setComponents(
-                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                                EmbedHelper.createPaginationButtons("pllist", newPage, maxPages)
-                        )).queue());
+                var container = EmbedHelper.createPlaylistListContainer(playlists, newPage, "pllist");
+                event.editComponents(container).useComponentsV2().queue();
             } else if (id.startsWith("pltracks_") && parts.length >= 5) {
                 String playlistId = parts[1];
                 String ownerUserId = parts[2];
@@ -231,11 +224,8 @@ public class InteractionHandler {
                 if (pl == null) { event.reply("Playlist not found.").setEphemeral(true).queue(); return; }
                 int maxPages = Math.max(1, (int) Math.ceil(pl.getTracks().size() / 10.0));
                 int newPage = calcNewPage(action, currentPage, maxPages);
-                MessageEmbed embed = EmbedHelper.createPlaylistTracksEmbed(pl, newPage);
-                event.deferEdit().queue(v -> event.getHook().editOriginalEmbeds(embed).setComponents(
-                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                                EmbedHelper.createPaginationButtons("pltracks_" + playlistId + "_" + ownerUserId, newPage, maxPages)
-                        )).queue());
+                var container = EmbedHelper.createPlaylistTracksContainer(pl, newPage, "pltracks_" + playlistId + "_" + ownerUserId);
+                event.editComponents(container).useComponentsV2().queue();
             } else if (id.startsWith("favlist_") && parts.length >= 4) {
                 String ownerUserId = parts[1];
                 String action = parts[2];
@@ -243,11 +233,8 @@ public class InteractionHandler {
                 PlaylistData fav = PlaylistManager.getInstance().getFavorites(ownerUserId);
                 int maxPages = Math.max(1, (int) Math.ceil(fav.getTracks().size() / 10.0));
                 int newPage = calcNewPage(action, currentPage, maxPages);
-                MessageEmbed embed = EmbedHelper.createPlaylistTracksEmbed(fav, newPage);
-                event.deferEdit().queue(v -> event.getHook().editOriginalEmbeds(embed).setComponents(
-                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                                EmbedHelper.createPaginationButtons("favlist_" + ownerUserId, newPage, maxPages)
-                        )).queue());
+                var container = EmbedHelper.createPlaylistTracksContainer(fav, newPage, "favlist_" + ownerUserId);
+                event.editComponents(container).useComponentsV2().queue();
             } else if (id.startsWith("lyrics_") && parts.length == 4) {
                 String action = parts[1];
                 String lyricsId = parts[2];
@@ -259,11 +246,8 @@ public class InteractionHandler {
                 }
                 int maxPages = data.pages.size();
                 int newPage = calcNewPage(action, currentPage, maxPages);
-                MessageEmbed embed = EmbedHelper.createLyricsEmbed(data.query, data.pages, newPage, data.source, data.isLive);
-                event.deferEdit().queue(v -> event.getHook().editOriginalEmbeds(embed).setComponents(
-                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                                EmbedHelper.createLyricsComponents(lyricsId, newPage, maxPages)
-                        )).queue());
+                var container = EmbedHelper.createLyricsContainer(lyricsId, data.query, data.pages, newPage, data.source, data.isLive);
+                event.editComponents(container).useComponentsV2().queue();
             } else if (id.startsWith("history_") && parts.length == 3) {
                 String action = parts[1];
                 int currentPage = Integer.parseInt(parts[2]);
@@ -271,11 +255,8 @@ public class InteractionHandler {
                 java.util.List<com.discord.musicbot.data.HistoryManager.HistoryEntry> history = com.discord.musicbot.data.HistoryManager.getInstance().getUserHistory(userId);
                 int maxPages = Math.max(1, (int) Math.ceil(history.size() / 10.0));
                 int newPage = calcNewPage(action, currentPage, maxPages);
-                MessageEmbed embed = EmbedHelper.createHistoryEmbed(history, newPage);
-                event.deferEdit().queue(v -> event.getHook().editOriginalEmbeds(embed).setComponents(
-                        net.dv8tion.jda.api.components.actionrow.ActionRow.of(
-                                EmbedHelper.createPaginationButtons("history", newPage, maxPages)
-                        )).queue());
+                var container = EmbedHelper.createHistoryContainer(history, newPage);
+                event.editComponents(container).useComponentsV2().queue();
             }
         } catch (NumberFormatException e) {
             event.reply("Invalid pagination data.").setEphemeral(true).queue();
