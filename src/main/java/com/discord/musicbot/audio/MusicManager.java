@@ -19,7 +19,6 @@ import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.components.thumbnail.Thumbnail;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -436,8 +435,8 @@ public class MusicManager {
             return;
 
         final net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel finalChannel = channel;
-        net.dv8tion.jda.api.components.container.Container container = createNowPlayingContainer(trackOverride);
-        if (container == null)
+        java.util.List<net.dv8tion.jda.api.components.MessageTopLevelComponent> components = createNowPlayingContainer(trackOverride);
+        if (components == null || components.isEmpty())
             return;
 
         isSendingNowPlaying = true;
@@ -453,23 +452,23 @@ public class MusicManager {
 
 
         try {
-            finalizeNowPlayingMessage(finalChannel, container);
+            finalizeNowPlayingMessage(finalChannel, components);
         } catch (Exception e) {
             isSendingNowPlaying = false;
         }
     }
 
     private void finalizeNowPlayingMessage(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel channel,
-            net.dv8tion.jda.api.components.container.Container container) {
+            java.util.List<net.dv8tion.jda.api.components.MessageTopLevelComponent> components) {
         try {
             if (nowPlayingMessageId != null) {
-                channel.editMessageComponentsById(nowPlayingMessageId, container)
+                channel.editMessageComponentsById(nowPlayingMessageId, components)
                         .useComponentsV2()
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .queue(success -> isSendingNowPlaying = false, e -> {
                             nowPlayingMessageId = null;
                             try {
-                                channel.sendMessageComponents(container)
+                                channel.sendMessageComponents(components)
                                         .useComponentsV2()
                                         .setAllowedMentions(java.util.Collections.emptyList())
                                         .queue(msg -> {
@@ -481,7 +480,7 @@ public class MusicManager {
                             }
                         });
             } else {
-                channel.sendMessageComponents(container)
+                channel.sendMessageComponents(components)
                         .useComponentsV2()
                         .setAllowedMentions(java.util.Collections.emptyList())
                         .queue(msg -> {
@@ -494,11 +493,11 @@ public class MusicManager {
         }
     }
 
-    public Container createNowPlayingContainer() {
+    public java.util.List<net.dv8tion.jda.api.components.MessageTopLevelComponent> createNowPlayingContainer() {
         return createNowPlayingContainer(null);
     }
 
-    public Container createNowPlayingContainer(com.sedmelluq.discord.lavaplayer.track.AudioTrack trackOverride) {
+    public java.util.List<net.dv8tion.jda.api.components.MessageTopLevelComponent> createNowPlayingContainer(com.sedmelluq.discord.lavaplayer.track.AudioTrack trackOverride) {
         com.sedmelluq.discord.lavaplayer.track.AudioTrack track = trackOverride != null ? trackOverride : scheduler.getCurrentTrack();
         if (track == null)
             return null;
@@ -577,10 +576,11 @@ public class MusicManager {
             children.add(TextDisplay.of("-# " + footer.toString()));
         }
 
-        java.util.List<ActionRow> rows = com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(this);
-        children.addAll(rows);
-
-        return Container.of(children).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
+        Container container = Container.of(children).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
+        java.util.List<net.dv8tion.jda.api.components.MessageTopLevelComponent> components = new java.util.ArrayList<>();
+        components.add(container);
+        components.addAll(com.discord.musicbot.commands.framework.EmbedHelper.createNowPlayingComponents(this));
+        return components;
     }
 
     // --- Alone Mode Logic ---

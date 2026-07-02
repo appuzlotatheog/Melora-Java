@@ -14,7 +14,9 @@ import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
+import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
+import net.dv8tion.jda.api.components.thumbnail.Thumbnail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -329,6 +331,21 @@ public class EmbedHelper {
             description.append(String.format("**%sping** - Check bot latency.\n", prefix));
         } else {
             description.append("### Error\n\nCommand not found. Use `" + prefix + "help` to see all commands.");
+        }
+
+        if (category.equals("home")) {
+            String logoUrl = jda.getSelfUser().getEffectiveAvatarUrl();
+            if (logoUrl == null || logoUrl.isEmpty()) {
+                logoUrl = BOT_LOGO_URL;
+            }
+            var section = Section.of(
+                    Thumbnail.fromUrl(logoUrl),
+                    TextDisplay.of(description.toString())
+            );
+            return Container.of(
+                    section,
+                    createHelpMenu()
+            ).withAccentColor(COLOR_MAIN);
         }
 
         return Container.of(
