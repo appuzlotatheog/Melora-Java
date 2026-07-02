@@ -74,11 +74,13 @@ public class VoiceEventHandler extends ListenerAdapter {
                     } catch (Exception ignored) {}
                 }
                 if (tc != null) {
-                    String desc = "☹️ I was forcefully disconnected! My queue has been cleared.";
-                    var container = net.dv8tion.jda.api.components.container.Container.of(
-                        net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(desc)
-                    ).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
-                    tc.sendMessageComponents(container).useComponentsV2().queue(null, new net.dv8tion.jda.api.exceptions.ErrorHandler().ignore(net.dv8tion.jda.api.exceptions.ErrorResponseException.class));
+                    if (manager == null || !manager.isDeliberateDisconnect()) {
+                        String desc = "☹️ I was forcefully disconnected! My queue has been cleared.";
+                        var container = net.dv8tion.jda.api.components.container.Container.of(
+                            net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(desc)
+                        ).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
+                        tc.sendMessageComponents(container).useComponentsV2().queue(null, new net.dv8tion.jda.api.exceptions.ErrorHandler().ignore(net.dv8tion.jda.api.exceptions.ErrorResponseException.class));
+                    }
                 }
                 
                 com.discord.musicbot.data.model.GuildSettings settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guild.getId());

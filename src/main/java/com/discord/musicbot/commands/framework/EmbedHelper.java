@@ -181,10 +181,10 @@ public class EmbedHelper {
             if (requesterId != null) {
                 net.dv8tion.jda.api.entities.Member m = manager.getGuild().getMemberById(requesterId);
                 if (m != null) {
-                    requester = " - @" + m.getEffectiveName();
+                    requester = " - " + m.getEffectiveName();
                 } else {
                     net.dv8tion.jda.api.entities.User u = manager.getGuild().getJDA().getUserById(requesterId);
-                    if (u != null) requester = " - @" + u.getName();
+                    if (u != null) requester = " - " + u.getName();
                 }
             }
             

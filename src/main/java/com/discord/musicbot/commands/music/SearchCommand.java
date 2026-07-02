@@ -55,6 +55,9 @@ public class SearchCommand extends SlashCommand {
                 List<AudioTrack> results = tracks.subList(0, count);
                 
                 String searchId = UUID.randomUUID().toString();
+                if (searchCache.size() >= 100) {
+                    searchCache.clear();
+                }
                 searchCache.put(searchId, results);
                 
                 com.discord.musicbot.audio.PlayerManager.scheduledExecutor.schedule(() -> searchCache.remove(searchId), 5, java.util.concurrent.TimeUnit.MINUTES);

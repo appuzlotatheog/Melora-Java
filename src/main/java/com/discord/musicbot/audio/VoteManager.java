@@ -165,8 +165,7 @@ public class VoteManager {
                 mm.getScheduler().clear();
                 break;
             case DISCONNECT:
-                guild.getAudioManager().closeAudioConnection();
-                mm.getScheduler().stop();
+                mm.disconnect();
                 break;
         }
     }

@@ -53,6 +53,16 @@ public class MusicManager {
     private ScheduledFuture<?> watchdogTask;
     private int stallCount = 0;
     
+    private volatile boolean isDeliberateDisconnect = false;
+    
+    public void markDeliberateDisconnect() {
+        this.isDeliberateDisconnect = true;
+    }
+
+    public boolean isDeliberateDisconnect() {
+        return isDeliberateDisconnect;
+    }
+
     private java.util.Set<String> tempDjs;
 
     public void grantTempDj(String userId) {
@@ -278,6 +288,7 @@ public class MusicManager {
      * Connect to voice channel and enforce 96kbps audio bitrate if permitted.
      */
     public void connectToVoiceChannel(net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion vc) {
+        this.isDeliberateDisconnect = false;
         guild.getAudioManager().setSelfDeafened(true);
         guild.getAudioManager().openAudioConnection(vc);
         
@@ -304,6 +315,7 @@ public class MusicManager {
      * Disconnect from voice channel.
      */
     public void disconnect() {
+        markDeliberateDisconnect();
         updateVoiceChannelStatus(); // Clear the voice channel status
         guild.getAudioManager().closeAudioConnection();
         scheduler.stop();
@@ -513,10 +525,10 @@ public class MusicManager {
         if (requesterId != null) {
             net.dv8tion.jda.api.entities.Member m = guild.getMemberById(requesterId);
             if (m != null) {
-                requester = "@" + m.getEffectiveName();
+                requester = m.getEffectiveName();
             } else {
                 net.dv8tion.jda.api.entities.User u = guild.getJDA().getUserById(requesterId);
-                if (u != null) requester = "@" + u.getName();
+                if (u != null) requester = u.getName();
                 else requester = "Unknown";
             }
         }
@@ -877,6 +889,7 @@ public class MusicManager {
                 // If JDA thinks we are already connected (ghost connection), force a reconnect
                 // to establish a clean UDP audio socket with Discord.
                 if (guild.getSelfMember().getVoiceState() != null && guild.getSelfMember().getVoiceState().inAudioChannel()) {
+                    markDeliberateDisconnect();
                     guild.getAudioManager().closeAudioConnection();
                     try { Thread.sleep(500); } catch (Exception ignored) {} // Give Discord time to process the drop
                 }
@@ -969,6 +982,7 @@ public class MusicManager {
     }
 
     public void destroy() {
+        markDeliberateDisconnect();
         if (PlayerManager.isShuttingDown) {
             return;
         }
@@ -1016,6 +1030,7 @@ public class MusicManager {
      * Graceful cleanup for bot shutdown.
      */
     public void cleanup() {
+        markDeliberateDisconnect();
         try {
             SessionManager.getInstance().updateSnapshot(guild.getId(), toSessionSnapshot()); // Force save before shutdown (must be done before closeAudioConnection)
         } catch (Exception e) {
