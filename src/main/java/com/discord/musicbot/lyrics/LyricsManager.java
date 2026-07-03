@@ -66,10 +66,15 @@ public class LyricsManager {
                     JsonNode array = mapper.readTree(lrcRes.body());
                     if (array.isArray() && array.size() > 0) {
                         JsonNode bestMatch = array.get(0);
+                        String synced = bestMatch.hasNonNull("syncedLyrics") ? bestMatch.get("syncedLyrics").asText() : null;
                         String plain = bestMatch.hasNonNull("plainLyrics") ? bestMatch.get("plainLyrics").asText() : null;
+                        boolean hasSynced = synced != null && !synced.isBlank();
 
                         if (plain != null && !plain.isBlank()) {
-                            return new LyricsResult(plain, "LRCLIB", false);
+                            return new LyricsResult(plain, "LRCLIB", hasSynced);
+                        } else if (hasSynced) {
+                            String stripped = synced.replaceAll("\\[\\d{2}:\\d{2}(\\.\\d{2,3})?\\]\\s*", "");
+                            return new LyricsResult(stripped, "LRCLIB", true);
                         }
                     }
                 }

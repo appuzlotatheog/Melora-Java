@@ -23,6 +23,24 @@ public class LyricsCommand extends SlashCommand {
 
     @Override
     public void execute(CommandContext ctx) {
+        if (ctx.getEvent().getOption("live") != null) {
+            boolean live = ctx.getEvent().getOption("live").getAsBoolean();
+            com.discord.musicbot.audio.MusicManager mm = PlayerManager.getInstance()
+                    .getMusicManager(ctx.getGuild().getIdLong());
+            if (mm == null || mm.getPlayer().getPlayingTrack() == null) {
+                ctx.replyError("There is no music playing right now to configure live synced lyrics for.");
+                return;
+            }
+            if (live) {
+                mm.enableInstantKaraoke();
+                ctx.replySuccess("**Live Instant Lyrics Enabled!** Synced real-time timestamped lyrics are now active and tracking on the Now Playing display!");
+            } else {
+                mm.setKaraokeMode(false);
+                ctx.replySuccess("**Live Lyrics Disabled.** Synced lyrics will no longer appear on the Now Playing display.");
+            }
+            return;
+        }
+
         String query = null;
         if (ctx.getEvent().getOption("query") != null) {
             query = ctx.getOption("query").getAsString();
@@ -61,11 +79,6 @@ public class LyricsCommand extends SlashCommand {
             // Split into pages by verses using EmbedHelper
             List<String> pages = EmbedHelper.splitLyrics(result.text);
 
-            // Store pages temporarily or pass them in the components?
-            // Better to cache them or since we don't have a database for lyrics,
-            // we can use a temporary in-memory cache for pagination.
-            // But wait, the bot's InteractionHandler relies on state.
-            // We can just add them to an in-memory map in EmbedHelper or LyricsManager.
             String lyricsId = java.util.UUID.randomUUID().toString();
             LyricsCache.put(lyricsId, new LyricsCache.LyricsData(finalQuery, pages, result.source, result.isLive));
 
@@ -92,8 +105,10 @@ public class LyricsCommand extends SlashCommand {
 
     @Override
     public CommandData getCommandData() {
-        return Commands.slash(getName(), "Get lyrics for a song")
-                .addOptions(new OptionData(OptionType.STRING, "query", "The song name (leave blank for current song)",
-                        false));
+        return Commands.slash(getName(), "Get lyrics for a song or enable live synced lyrics")
+                .addOptions(
+                        new OptionData(OptionType.STRING, "query", "The song name (leave blank for current song)", false),
+                        new OptionData(OptionType.BOOLEAN, "live", "Enable instant live synced karaoke lyrics on Now Playing embed", false)
+                );
     }
 }

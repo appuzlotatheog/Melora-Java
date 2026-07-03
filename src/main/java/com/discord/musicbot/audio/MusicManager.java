@@ -98,6 +98,52 @@ public class MusicManager {
         fetchingLyrics = false;
     }
 
+    public void enableInstantKaraoke() {
+        this.karaokeMode = true;
+        AudioTrack current = player.getPlayingTrack();
+        if (current == null) return;
+
+        if (this.karaokeLines == null && !this.fetchingLyrics) {
+            this.fetchingLyrics = true;
+            this.lastKaraokeLine = "Searching for instant live lyrics...";
+            sendNowPlayingMessage(false);
+
+            String query = current.getInfo().author + " " + current.getInfo().title;
+            query = query.replaceAll("(?i)\\b(official|music video|audio|lyric video|lyrics)\\b", "").replaceAll("[\\(\\[].*?[\\)\\]]", "").trim();
+            final String finalQuery = query;
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    String syncedLrc = LyricsManager.fetchSyncedLyrics(finalQuery).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                    if (syncedLrc != null) {
+                        this.karaokeLines = KaraokeManager.parseLrc(syncedLrc);
+                        long pos = current.getPosition();
+                        String activeLine = KaraokeManager.getActiveLine(this.karaokeLines, pos);
+                        if (activeLine != null) {
+                            this.lastKaraokeLine = activeLine;
+                        }
+                    } else {
+                        this.karaokeLines = new java.util.ArrayList<>();
+                    }
+                } catch (Exception e) {
+                    this.karaokeLines = new java.util.ArrayList<>();
+                } finally {
+                    this.fetchingLyrics = false;
+                    if (this.karaokeLines != null && this.karaokeLines.isEmpty()) {
+                        this.lastKaraokeLine = "No synced lyrics available.";
+                    }
+                    sendNowPlayingMessage(false);
+                }
+            }, PlayerManager.ioExecutor);
+        } else if (this.karaokeLines != null && !this.karaokeLines.isEmpty()) {
+            long pos = current.getPosition();
+            String activeLine = KaraokeManager.getActiveLine(this.karaokeLines, pos);
+            if (activeLine != null) {
+                this.lastKaraokeLine = activeLine;
+            }
+            sendNowPlayingMessage(false);
+        }
+    }
+
     private long lastWatchdogAction = 0;
 
     public MusicManager(AudioPlayerManager manager, Guild guild) {

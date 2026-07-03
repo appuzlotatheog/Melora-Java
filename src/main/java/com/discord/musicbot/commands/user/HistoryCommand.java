@@ -46,10 +46,12 @@ public class HistoryCommand extends SlashCommand {
                             .addOption("All User Data", "all", "Permanently wipe all of your stored data")
                             .build();
 
-            ctx.getEvent().reply(com.discord.musicbot.config.EmojiConfig.getInstance().error + " **Select the data you wish to permanently delete:**")
-                    .addComponents(net.dv8tion.jda.api.components.actionrow.ActionRow.of(menu))
-                    .setEphemeral(true)
-                    .queue();
+            var container = net.dv8tion.jda.api.components.container.Container.of(
+                    net.dv8tion.jda.api.components.textdisplay.TextDisplay.of(com.discord.musicbot.config.EmojiConfig.getInstance().error + " **Select the data you wish to permanently delete:**"),
+                    net.dv8tion.jda.api.components.actionrow.ActionRow.of(menu)
+            ).withAccentColor(com.discord.musicbot.commands.framework.EmbedHelper.COLOR_MAIN);
+
+            ctx.getEvent().replyComponents(container).useComponentsV2().setEphemeral(true).queue();
         }
     }
 

@@ -208,10 +208,12 @@ public class EmbedHelper {
 
     public static Container createLyricsContainer(String lyricsId, String query, List<String> pages, int pageNum, String source, boolean isLive) {
         StringBuilder content = new StringBuilder();
-        content.append("### Lyrics: ").append(query).append("\n\n");
+        String titlePrefix = isLive ? "[LIVE SYNC] " : "";
+        content.append("### ").append(titlePrefix).append("Lyrics: ").append(query).append("\n\n");
         content.append(pages.get(pageNum - 1));
         
-        String footer = String.format("Page %d/%d | Source: %s", pageNum, pages.size(), source);
+        String liveBadge = isLive ? " | [LIVE SYNC]" : "";
+        String footer = String.format("Page %d/%d | Source: %s%s", pageNum, pages.size(), source, liveBadge);
         content.append("\n\n-# ").append(footer);
 
         List<ContainerChildComponent> children = new ArrayList<>();

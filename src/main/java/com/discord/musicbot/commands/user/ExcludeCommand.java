@@ -3,7 +3,6 @@ package com.discord.musicbot.commands.user;
 import com.discord.musicbot.commands.framework.CommandContext;
 import com.discord.musicbot.commands.framework.SlashCommand;
 import com.discord.musicbot.data.UserExcludeManager;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
@@ -27,11 +26,6 @@ public class ExcludeCommand extends SlashCommand {
         }
 
         String requesterId = ctx.getUser().getId();
-        boolean hasPerm = ctx.getGuild() != null
-                && ctx.getGuild().getSelfMember().hasPermission(Permission.VOICE_DEAF_OTHERS);
-        String permWarning = !hasPerm ? "\n\n" + com.discord.musicbot.config.EmojiConfig.getInstance().error
-                + " **Note:** The bot currently lacks the **Deafen Members** permission in this server, so automatic deafening will not take effect until an admin grants it."
-                : "";
 
         switch (sub) {
             case "add": {
@@ -48,8 +42,7 @@ public class ExcludeCommand extends SlashCommand {
                 boolean added = UserExcludeManager.getInstance().addExclude(requesterId, target.getId());
                 if (added) {
                     ctx.replySuccess("Added **" + target.getEffectiveName()
-                            + "** to your exclusion list. They will be automatically server-deafened when your requested tracks are playing."
-                            + permWarning);
+                            + "** to your exclusion list. When your requested tracks play, they will be automatically notified to mute the bot locally so they won't hear your music while remaining free to talk with others!");
                 } else {
                     ctx.replyError(
                             "That user is already in your exclusion list or you have reached the maximum limit of "
@@ -82,8 +75,7 @@ public class ExcludeCommand extends SlashCommand {
                 for (String id : excludes) {
                     sb.append("• <@").append(id).append(">\n");
                 }
-                sb.append("\n*These members are automatically server-deafened while your requested songs play.*")
-                        .append(permWarning);
+                sb.append("\n*When your songs play, these members receive automatic notifications to mute the bot locally so they can converse with others without hearing your music.*");
                 ctx.replySuccess(sb.toString());
                 break;
             }

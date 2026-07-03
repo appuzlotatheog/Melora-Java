@@ -60,20 +60,23 @@ public class TrackScheduler extends AudioEventAdapter {
     private void applyExclusions(String requesterId) {
         if (requesterId == null) return;
         net.dv8tion.jda.api.entities.Guild guild = musicManager.getGuild();
-        if (guild == null || !guild.getSelfMember().hasPermission(net.dv8tion.jda.api.Permission.VOICE_DEAF_OTHERS)) return;
+        if (guild == null) return;
         net.dv8tion.jda.api.entities.channel.middleman.AudioChannel channel = guild.getSelfMember().getVoiceState() != null ? guild.getSelfMember().getVoiceState().getChannel() : null;
         if (channel == null) return;
 
         java.util.Set<String> excluded = com.discord.musicbot.data.UserExcludeManager.getInstance().getExcludes(requesterId);
         if (excluded.isEmpty()) return;
 
+        net.dv8tion.jda.api.entities.Member requesterMember = guild.getMemberById(requesterId);
+        String requesterName = requesterMember != null ? requesterMember.getEffectiveName() : "A user";
+
         for (net.dv8tion.jda.api.entities.Member member : channel.getMembers()) {
             if (excluded.contains(member.getId()) && !member.getUser().isBot() && !member.getId().equals(requesterId)) {
-                net.dv8tion.jda.api.entities.GuildVoiceState vs = member.getVoiceState();
-                if (vs != null && !vs.isDeafened() && guild.getSelfMember().canInteract(member)) {
-                    guild.deafen(member, true).queue(
-                            s -> currentlyExcludedMemberIds.add(member.getId()),
-                            e -> logger.warn("Failed to server-deafen excluded user {}: {}", member.getId(), e.getMessage())
+                if (currentlyExcludedMemberIds.add(member.getId())) {
+                    String msg = com.discord.musicbot.config.EmojiConfig.getInstance().error + " **Music Exclusion Notice:** You have been excluded from hearing music requested by **" + requesterName + "** in `" + guild.getName() + "`. To mute only the bot's music while continuing to talk with everyone else in voice, right-click the bot and check **Mute** (or set User Volume to 0%)!";
+                    member.getUser().openPrivateChannel().queue(
+                            pc -> pc.sendMessage(msg).queue(null, e -> logger.debug("Could not send DM to excluded member {}", member.getId())),
+                            e -> logger.debug("Could not open PC for excluded member {}", member.getId())
                     );
                 }
             }
@@ -83,20 +86,18 @@ public class TrackScheduler extends AudioEventAdapter {
     private void removeExclusions() {
         if (currentlyExcludedMemberIds.isEmpty()) return;
         net.dv8tion.jda.api.entities.Guild guild = musicManager.getGuild();
-        if (guild == null || !guild.getSelfMember().hasPermission(net.dv8tion.jda.api.Permission.VOICE_DEAF_OTHERS)) {
+        if (guild == null) {
             currentlyExcludedMemberIds.clear();
             return;
         }
         for (String memberId : new java.util.HashSet<>(currentlyExcludedMemberIds)) {
             net.dv8tion.jda.api.entities.Member member = guild.getMemberById(memberId);
             if (member != null) {
-                net.dv8tion.jda.api.entities.GuildVoiceState vs = member.getVoiceState();
-                if (vs != null && vs.isGuildDeafened() && guild.getSelfMember().canInteract(member)) {
-                    guild.deafen(member, false).queue(
-                            s -> {},
-                            e -> logger.warn("Failed to server-undeafen user {}: {}", memberId, e.getMessage())
-                    );
-                }
+                String msg = com.discord.musicbot.config.EmojiConfig.getInstance().enabled + " **Exclusion Ended:** The songs requested by the user who excluded you have finished in `" + guild.getName() + "`. You can now un-mute the bot!";
+                member.getUser().openPrivateChannel().queue(
+                        pc -> pc.sendMessage(msg).queue(null, e -> {}),
+                        e -> {}
+                );
             }
         }
         currentlyExcludedMemberIds.clear();
