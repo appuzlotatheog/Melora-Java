@@ -48,7 +48,11 @@ public class LoopCommand extends SlashCommand {
 
     @Override
     public CommandData getCommandData() {
-        return Commands.slash(getName(), "Set loop mode").addOption(OptionType.STRING, "mode", "off/track/queue", false);
+        return Commands.slash(getName(), "Set loop mode")
+                .addOptions(new net.dv8tion.jda.api.interactions.commands.build.OptionData(OptionType.STRING, "mode", "Choose loop mode (off, track, queue)", false)
+                        .addChoice("Off", "off")
+                        .addChoice("Track", "track")
+                        .addChoice("Queue", "queue"));
     }
 }
 

@@ -362,7 +362,7 @@ public class InteractionHandler {
                 }
                 break;
             case "np_skip":
-                if (manager.getScheduler().getQueueSize() == 0 && !manager.getScheduler().getAutoplay() && !manager.getScheduler().isRandomPlay()) {
+                if (manager.getScheduler().getQueueSize() == 0 && !manager.getScheduler().getAutoplay() && !manager.getScheduler().isRandomPlay() && manager.getScheduler().getLoopMode() != com.discord.musicbot.audio.TrackScheduler.LoopMode.TRACK) {
                     event.reply("No tracks in queue to skip to.").setEphemeral(true).queue();
                 } else {
                     event.deferEdit().queue();
