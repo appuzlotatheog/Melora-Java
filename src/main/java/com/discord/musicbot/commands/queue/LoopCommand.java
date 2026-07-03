@@ -15,20 +15,25 @@ public class LoopCommand extends SlashCommand {
     @Override
     public void execute(CommandContext ctx) {
         var modeOpt = ctx.getOption("mode");
+        com.discord.musicbot.audio.TrackScheduler.LoopMode newMode;
         if (modeOpt == null) {
-            var m = ctx.getScheduler().cycleLoopMode();
-            ctx.replySuccess("Loop mode set to: " + m.name());
-            ctx.getMusicManager().updateNowPlayingMessage();
+            newMode = ctx.getScheduler().cycleLoopMode();
         } else {
             String m = modeOpt.getAsString().toUpperCase();
             try {
-                com.discord.musicbot.audio.TrackScheduler.LoopMode lm = com.discord.musicbot.audio.TrackScheduler.LoopMode.valueOf(m);
-                ctx.getScheduler().setLoopMode(lm);
-                ctx.replySuccess("Loop mode set to: " + lm.name());
-                ctx.getMusicManager().updateNowPlayingMessage();
+                newMode = com.discord.musicbot.audio.TrackScheduler.LoopMode.valueOf(m);
+                ctx.getScheduler().setLoopMode(newMode);
             } catch (Exception e) {
-                ctx.replyError("Invalid mode.");
+                ctx.replyError("Invalid mode. Use: off, track, or queue.");
+                return;
             }
+        }
+
+        if (ctx.getScheduler().getCurrentTrack() == null) {
+            ctx.replySuccess("Loop mode set to: **" + newMode.name() + "** (Will apply when songs start playing)");
+        } else {
+            ctx.replySuccess("Loop mode set to: **" + newMode.name() + "**");
+            ctx.getMusicManager().updateNowPlayingMessage();
         }
     }
 

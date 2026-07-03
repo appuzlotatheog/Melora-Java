@@ -351,10 +351,15 @@ public class InteractionHandler {
                 } else {
                     manager.getScheduler().pause();
                 }
-                event.editComponents(manager.createNowPlayingContainer())
-                        .useComponentsV2()
-                        .setAllowedMentions(java.util.Collections.emptyList())
-                        .queue();
+                var pauseComponents = manager.createNowPlayingContainer();
+                if (pauseComponents != null && !pauseComponents.isEmpty()) {
+                    event.editComponents(pauseComponents)
+                            .useComponentsV2()
+                            .setAllowedMentions(java.util.Collections.emptyList())
+                            .queue();
+                } else {
+                    event.reply(EmbedHelper.MSG_SUCCESS + " Playback is now **" + (manager.getScheduler().isPaused() ? "Paused" : "Resumed") + "**").setEphemeral(true).queue();
+                }
                 break;
             case "np_skip":
                 if (manager.getScheduler().getQueueSize() == 0 && !manager.getScheduler().getAutoplay() && !manager.getScheduler().isRandomPlay()) {
@@ -379,11 +384,16 @@ public class InteractionHandler {
                 manager.updateNowPlayingMessage();
                 break;
             case "np_loop":
-                manager.getScheduler().cycleLoopMode();
-                event.editComponents(manager.createNowPlayingContainer())
-                        .useComponentsV2()
-                        .setAllowedMentions(java.util.Collections.emptyList())
-                        .queue();
+                var loopMode = manager.getScheduler().cycleLoopMode();
+                var loopComponents = manager.createNowPlayingContainer();
+                if (loopComponents != null && !loopComponents.isEmpty()) {
+                    event.editComponents(loopComponents)
+                            .useComponentsV2()
+                            .setAllowedMentions(java.util.Collections.emptyList())
+                            .queue();
+                } else {
+                    event.reply(EmbedHelper.MSG_SUCCESS + " Loop mode set to: **" + loopMode.name() + "** (Will apply when songs start playing)").setEphemeral(true).queue();
+                }
                 break;
             case "np_queue":
                 if (manager.getScheduler().getQueueSize() == 0) {
@@ -397,18 +407,30 @@ public class InteractionHandler {
                         .queue();
                 break;
             case "np_voldown":
-                manager.getPlayer().setVolume(Math.max(1, manager.getPlayer().getVolume() - 10));
-                event.editComponents(manager.createNowPlayingContainer())
-                        .useComponentsV2()
-                        .setAllowedMentions(java.util.Collections.emptyList())
-                        .queue();
+                int newVolDown = Math.max(1, manager.getPlayer().getVolume() - 10);
+                manager.getPlayer().setVolume(newVolDown);
+                var volDownComponents = manager.createNowPlayingContainer();
+                if (volDownComponents != null && !volDownComponents.isEmpty()) {
+                    event.editComponents(volDownComponents)
+                            .useComponentsV2()
+                            .setAllowedMentions(java.util.Collections.emptyList())
+                            .queue();
+                } else {
+                    event.reply(EmbedHelper.MSG_SUCCESS + " Volume decreased to **" + newVolDown + "%**").setEphemeral(true).queue();
+                }
                 break;
             case "np_volup":
-                manager.getPlayer().setVolume(Math.min(200, manager.getPlayer().getVolume() + 10));
-                event.editComponents(manager.createNowPlayingContainer())
-                        .useComponentsV2()
-                        .setAllowedMentions(java.util.Collections.emptyList())
-                        .queue();
+                int newVolUp = Math.min(200, manager.getPlayer().getVolume() + 10);
+                manager.getPlayer().setVolume(newVolUp);
+                var volUpComponents = manager.createNowPlayingContainer();
+                if (volUpComponents != null && !volUpComponents.isEmpty()) {
+                    event.editComponents(volUpComponents)
+                            .useComponentsV2()
+                            .setAllowedMentions(java.util.Collections.emptyList())
+                            .queue();
+                } else {
+                    event.reply(EmbedHelper.MSG_SUCCESS + " Volume increased to **" + newVolUp + "%**").setEphemeral(true).queue();
+                }
                 break;
             case "np_stop":
                 event.reply("Stopped playback and cleared the queue.").setEphemeral(true).queue();
