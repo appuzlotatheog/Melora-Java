@@ -162,7 +162,12 @@ public class AutocompleteHandler {
             if (choices.size() >= 25)
                 break;
             String label = "🕛 " + (h.title.length() > 90 ? h.title.substring(0, 90) + "..." : h.title);
-            choices.add(new Command.Choice(label, h.uri));
+            String choiceVal = (h.uri != null && (h.uri.contains("spotify.com") || h.uri.contains("youtube.com") || h.uri.contains("youtu.be") || h.uri.startsWith("http") || h.uri.startsWith("ytmsearch:") || h.uri.startsWith("ytsearch:")))
+                    ? h.title + " " + h.author
+                    : h.uri;
+            if (choiceVal == null || choiceVal.trim().isEmpty()) choiceVal = h.title;
+            if (choiceVal.length() > 100) choiceVal = choiceVal.substring(0, 100);
+            choices.add(new Command.Choice(label, choiceVal));
         }
 
         // If user typed something, search Spotify for exact studio song titles and artists
@@ -173,7 +178,7 @@ public class AutocompleteHandler {
                     if (finalChoices.size() >= 25) break;
                     String label = "🎵 " + meta.title() + " — " + meta.artist();
                     if (label.length() > 95) label = label.substring(0, 95) + "...";
-                    String val = meta.spotifyUrl() != null ? meta.spotifyUrl() : meta.title() + " " + meta.artist();
+                    String val = meta.title() + " " + meta.artist();
                     if (val.length() > 100) val = val.substring(0, 100);
                     finalChoices.add(new Command.Choice(label, val));
                 }

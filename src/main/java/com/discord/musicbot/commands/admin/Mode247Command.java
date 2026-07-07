@@ -60,7 +60,7 @@ public class Mode247Command extends SlashCommand {
             // Auto connect bot if not in VC
             var botState = ctx.getGuild().getSelfMember().getVoiceState();
             if (botState == null || !botState.inAudioChannel()) {
-                ctx.getGuild().getAudioManager().openAudioConnection(userState.getChannel());
+                ctx.getMusicManager().connectToVoiceChannel(userState.getChannel());
             }
         }
 

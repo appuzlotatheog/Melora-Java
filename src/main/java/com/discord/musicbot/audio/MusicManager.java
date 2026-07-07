@@ -63,6 +63,16 @@ public class MusicManager {
         return isDeliberateDisconnect;
     }
 
+    public String getActiveVoiceChannelId() {
+        return activeVoiceChannelId;
+    }
+
+    public void setActiveVoiceChannelId(String channelId) {
+        if (channelId != null) {
+            this.activeVoiceChannelId = channelId;
+        }
+    }
+
     private java.util.Set<String> tempDjs;
 
     public void grantTempDj(String userId) {
@@ -330,6 +340,9 @@ public class MusicManager {
      */
     public void connectToVoiceChannel(net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion vc) {
         this.isDeliberateDisconnect = false;
+        if (vc != null) {
+            this.activeVoiceChannelId = vc.getId();
+        }
         guild.getAudioManager().setSelfDeafened(true);
         guild.getAudioManager().openAudioConnection(vc);
         
@@ -875,8 +888,19 @@ public class MusicManager {
             activeVoiceChannelId = voiceState.getChannel().getId();
         } else if (guild.getAudioManager().getConnectedChannel() != null) {
             activeVoiceChannelId = guild.getAudioManager().getConnectedChannel().getId();
+        } else if (activeVoiceChannelId == null) {
+            var settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guild.getId());
+            if (settings.getLockedVoiceChannelId() != null && !settings.getLockedVoiceChannelId().isEmpty()) {
+                activeVoiceChannelId = settings.getLockedVoiceChannelId();
+            }
         }
         snapshot.voiceChannelId = activeVoiceChannelId;
+        if (nowPlayingChannelId == null) {
+            var settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guild.getId());
+            if (settings.getCommandChannelId() != null && !settings.getCommandChannelId().isEmpty()) {
+                nowPlayingChannelId = settings.getCommandChannelId();
+            }
+        }
         snapshot.textChannelId = nowPlayingChannelId;
 
         AudioTrack current = scheduler.getCurrentTrack();
@@ -920,7 +944,9 @@ public class MusicManager {
         this.activeVoiceChannelId = snapshot.voiceChannelId;
         if (snapshot.voiceChannelId != null) {
             net.dv8tion.jda.api.entities.channel.middleman.AudioChannel vc = guild
-                    .getVoiceChannelById(snapshot.voiceChannelId);
+                    .getChannelById(net.dv8tion.jda.api.entities.channel.middleman.AudioChannel.class, snapshot.voiceChannelId);
+            if (vc == null) vc = guild.getVoiceChannelById(snapshot.voiceChannelId);
+            if (vc == null) vc = guild.getStageChannelById(snapshot.voiceChannelId);
             if (vc != null) {
                 // If JDA thinks we are already connected (ghost connection), force a reconnect
                 // to establish a clean UDP audio socket with Discord.
@@ -991,9 +1017,6 @@ public class MusicManager {
     }
 
     public void notifySessionChanged() {
-        if (PlayerManager.isShuttingDown) {
-            return;
-        }
         try {
             SessionManager.getInstance().updateSnapshot(guild.getId(), toSessionSnapshot());
         } catch (Exception e) {
@@ -1003,32 +1026,31 @@ public class MusicManager {
 
     public void destroy() {
         markDeliberateDisconnect();
-        if (PlayerManager.isShuttingDown) {
-            return;
-        }
-        // Reset persisted states so they don't leak into the next session
-        try {
-            com.discord.musicbot.data.model.GuildSettings settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guild.getId());
-            if (mode247) {
-                mode247 = false;
-                settings.setMode247(false);
-                if (com.discord.musicbot.data.DatabaseManager.getInstance().is247(guild.getId())) {
-                    com.discord.musicbot.data.DatabaseManager.getInstance().toggle247(guild.getId());
+        if (!PlayerManager.isShuttingDown) {
+            // Reset persisted states so they don't leak into the next session
+            try {
+                com.discord.musicbot.data.model.GuildSettings settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guild.getId());
+                if (mode247) {
+                    mode247 = false;
+                    settings.setMode247(false);
+                    if (com.discord.musicbot.data.DatabaseManager.getInstance().is247(guild.getId())) {
+                        com.discord.musicbot.data.DatabaseManager.getInstance().toggle247(guild.getId());
+                    }
                 }
+                if (settings.isAutoplay() || settings.isRandomPlay()) {
+                    settings.setAutoplay(false);
+                    settings.setRandomPlay(false);
+                }
+                com.discord.musicbot.data.GuildSettingsManager.getInstance().markDirty();
+            } catch (Exception e) {
+                logger.warn("Failed to reset persisted states on destroy: {}", e.getMessage());
             }
-            if (settings.isAutoplay() || settings.isRandomPlay()) {
-                settings.setAutoplay(false);
-                settings.setRandomPlay(false);
-            }
-            com.discord.musicbot.data.GuildSettingsManager.getInstance().markDirty();
-        } catch (Exception e) {
-            logger.warn("Failed to reset persisted states on destroy: {}", e.getMessage());
-        }
 
-        try {
-            updateVoiceChannelStatus(""); // Clear the voice channel status
-            SessionManager.getInstance().updateSnapshot(guild.getId(), null);
-        } catch (Exception ignored) {
+            try {
+                updateVoiceChannelStatus(""); // Clear the voice channel status
+                SessionManager.getInstance().updateSnapshot(guild.getId(), null);
+            } catch (Exception ignored) {
+            }
         }
         cancelIdleTimeout();
         if (aloneTask != null)
@@ -1051,12 +1073,10 @@ public class MusicManager {
      */
     public void cleanup() {
         markDeliberateDisconnect();
-        if (!PlayerManager.isShuttingDown) {
-            try {
-                SessionManager.getInstance().updateSnapshot(guild.getId(), toSessionSnapshot()); // Force save before shutdown (must be done before closeAudioConnection)
-            } catch (Exception e) {
-                logger.warn("Failed to force save session: {}", e.getMessage());
-            }
+        try {
+            SessionManager.getInstance().updateSnapshot(guild.getId(), toSessionSnapshot()); // Force save before shutdown (must be done before closeAudioConnection)
+        } catch (Exception e) {
+            logger.warn("Failed to force save session: {}", e.getMessage());
         }
 
         // Send voice disconnection opcode immediately over WebSocket before blocking on REST API calls
@@ -1065,30 +1085,27 @@ public class MusicManager {
             guild.getJDA().getDirectAudioController().disconnect(guild);
         } catch (Exception ignored) {}
 
-        // Clear Voice Channel Status and delete now playing message only if not during global shutdown
-        if (!PlayerManager.isShuttingDown) {
-            try {
-                var voiceState = guild.getSelfMember().getVoiceState();
-                if (voiceState != null && voiceState.getChannel() instanceof net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel vc) {
-                    vc.modifyStatus("").submit().get(2, java.util.concurrent.TimeUnit.SECONDS);
-                }
-            } catch (Exception e) {
-                logger.warn("Failed to clear VC status on shutdown: {}", e.getMessage());
+        try {
+            var voiceState = guild.getSelfMember().getVoiceState();
+            if (voiceState != null && voiceState.getChannel() instanceof net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel vc) {
+                vc.modifyStatus("").submit().get(2, java.util.concurrent.TimeUnit.SECONDS);
             }
+        } catch (Exception e) {
+            logger.warn("Failed to clear VC status on shutdown: {}", e.getMessage());
+        }
 
-            try {
-                if (nowPlayingMessageId != null && nowPlayingChannelId != null) {
-                    net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel ch = guild
-                            .getChannelById(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel.class,
-                                    nowPlayingChannelId);
-                    if (ch != null) {
-                        ch.deleteMessageById(nowPlayingMessageId).submit().get(2, java.util.concurrent.TimeUnit.SECONDS);
-                    }
-                    nowPlayingMessageId = null;
+        try {
+            if (nowPlayingMessageId != null && nowPlayingChannelId != null) {
+                net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel ch = guild
+                        .getChannelById(net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel.class,
+                                nowPlayingChannelId);
+                if (ch != null) {
+                    ch.deleteMessageById(nowPlayingMessageId).submit().get(2, java.util.concurrent.TimeUnit.SECONDS);
                 }
-            } catch (Exception e) {
-                logger.warn("Failed to delete NP message on shutdown: {}", e.getMessage());
+                nowPlayingMessageId = null;
             }
+        } catch (Exception e) {
+            logger.warn("Failed to delete NP message on shutdown: {}", e.getMessage());
         }
 
         cancelIdleTimeout();

@@ -520,7 +520,7 @@ public class InteractionHandler {
                 MusicManager manager = PlayerManager.getInstance().getMusicManager(event.getGuild());
                 var userState = event.getMember().getVoiceState();
                 if (userState != null && userState.inAudioChannel() && !event.getGuild().getAudioManager().isConnected()) {
-                    event.getGuild().getAudioManager().openAudioConnection(userState.getChannel());
+                    manager.connectToVoiceChannel(userState.getChannel());
                 }
                 
                 manager.getScheduler().queue(selected);

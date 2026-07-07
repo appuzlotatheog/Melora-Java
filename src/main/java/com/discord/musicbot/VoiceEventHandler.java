@@ -97,6 +97,7 @@ public class VoiceEventHandler extends ListenerAdapter {
             } else if (event.getChannelJoined() != null) {
                 MusicManager manager = PlayerManager.getInstance().getMusicManager(guild.getIdLong());
                 if (manager != null) {
+                    manager.setActiveVoiceChannelId(event.getChannelJoined().getId());
                     if (manager.getPlayer().getPlayingTrack() == null) {
                         manager.updateVoiceChannelStatus(com.discord.musicbot.config.EmojiConfig.getInstance().addMusic + " Use /play to queue a song");
                     } else {

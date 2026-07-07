@@ -96,7 +96,11 @@ public class BotLauncher {
 
                         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                                 logger.info("Shutting down bot...");
-                                PlayerManager.getInstance().shutdown();
+                                try {
+                                        jda.getPresence().setStatus(net.dv8tion.jda.api.OnlineStatus.OFFLINE);
+                                        Thread.sleep(200); // Allow gateway to send presence update
+                                } catch (Exception ignored) {}
+                                PlayerManager.getInstance().shutdown(jda);
                                 com.discord.musicbot.data.SessionManager.getInstance().shutdown();
                                 com.discord.musicbot.data.PlaylistManager.getInstance().shutdown();
                                 com.discord.musicbot.data.StatsManager.getInstance().shutdown();

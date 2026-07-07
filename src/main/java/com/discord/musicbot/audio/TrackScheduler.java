@@ -175,8 +175,12 @@ public class TrackScheduler extends AudioEventAdapter {
         musicManager.updateVoiceChannelStatus(com.discord.musicbot.config.EmojiConfig.getInstance().music + " " + track.getInfo().title);
 
         if (lastRequesterId != null) {
+            String uri = track.getInfo().uri;
+            String historyQuery = (track instanceof SpotifyResolvedTrack || (uri != null && (uri.contains("spotify.com") || uri.contains("youtube.com") || uri.contains("youtu.be") || uri.startsWith("ytmsearch:") || uri.startsWith("ytsearch:"))))
+                    ? track.getInfo().title + " " + track.getInfo().author
+                    : uri;
             com.discord.musicbot.data.HistoryManager.getInstance().addEntry(
-                    track.getInfo().title, track.getInfo().uri, track.getInfo().author, track.getDuration(), lastRequesterId);
+                    track.getInfo().title, historyQuery, track.getInfo().author, track.getDuration(), lastRequesterId);
         }
 
         java.util.Set<String> newExcludes = lastRequesterId != null ? com.discord.musicbot.data.UserExcludeManager.getInstance().getExcludes(lastRequesterId) : java.util.Collections.emptySet();

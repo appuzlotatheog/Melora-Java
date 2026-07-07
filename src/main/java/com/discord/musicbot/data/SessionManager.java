@@ -141,12 +141,29 @@ public class SessionManager {
             }
 
             if (snapshot.voiceChannelId == null) {
+                var settings = com.discord.musicbot.data.GuildSettingsManager.getInstance().getSettings(guildId);
+                if (settings.getLockedVoiceChannelId() != null && !settings.getLockedVoiceChannelId().isEmpty()) {
+                    snapshot.voiceChannelId = settings.getLockedVoiceChannelId();
+                } else {
+                    var selfVs = guild.getSelfMember().getVoiceState();
+                    if (selfVs != null && selfVs.getChannel() != null) {
+                        snapshot.voiceChannelId = selfVs.getChannel().getId();
+                    }
+                }
+            }
+
+            if (snapshot.voiceChannelId == null) {
+                logger.warn("No voice channel ID found for session in guild {}. Discarding stale session.", guild.getName());
                 updateSnapshot(guildId, null);
                 continue;
             }
 
-            var voiceChannel = guild.getVoiceChannelById(snapshot.voiceChannelId);
+            net.dv8tion.jda.api.entities.channel.middleman.AudioChannel voiceChannel = guild
+                    .getChannelById(net.dv8tion.jda.api.entities.channel.middleman.AudioChannel.class, snapshot.voiceChannelId);
+            if (voiceChannel == null) voiceChannel = guild.getVoiceChannelById(snapshot.voiceChannelId);
+            if (voiceChannel == null) voiceChannel = guild.getStageChannelById(snapshot.voiceChannelId);
             if (voiceChannel == null) {
+                logger.warn("Voice channel {} not found for guild {}. Discarding stale session.", snapshot.voiceChannelId, guild.getName());
                 updateSnapshot(guildId, null);
                 continue;
             }
