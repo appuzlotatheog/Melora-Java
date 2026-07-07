@@ -676,4 +676,16 @@ public class PlaylistManager {
         if (clean.length() > 256) clean = clean.substring(0, 256);
         return clean;
     }
+
+    public void shutdown() {
+        flushAll();
+        saveExecutor.shutdown();
+        try {
+            if (!saveExecutor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                saveExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            saveExecutor.shutdownNow();
+        }
+    }
 }

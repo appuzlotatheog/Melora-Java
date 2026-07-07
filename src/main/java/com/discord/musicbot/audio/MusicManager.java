@@ -946,6 +946,7 @@ public class MusicManager {
             scheduler.toggleAutoplay();
         }
         scheduler.setRandomPlay(snapshot.randomPlay);
+        scheduler.setPaused(snapshot.isPaused);
         
         this.wasAlonePaused = snapshot.wasAlonePaused;
 

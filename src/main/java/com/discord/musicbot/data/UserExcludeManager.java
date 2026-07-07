@@ -120,4 +120,15 @@ public class UserExcludeManager {
             save();
         }
     }
+
+    public void shutdown() {
+        saveExecutor.shutdown();
+        try {
+            if (!saveExecutor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                saveExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            saveExecutor.shutdownNow();
+        }
+    }
 }

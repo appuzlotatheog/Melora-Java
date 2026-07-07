@@ -491,7 +491,16 @@ public class PlayerManager {
         return null;
     }
 
+    @FunctionalInterface
+    private interface SpotifyProgressiveCallback {
+        void onBatch(List<SpotifyMetadata> batch, int totalCount, String playlistName);
+    }
+
     private CompletableFuture<SpotifyPlaylistResult> fetchSpotifyPlaylist(String url) {
+        return fetchSpotifyPlaylist(url, null);
+    }
+
+    private CompletableFuture<SpotifyPlaylistResult> fetchSpotifyPlaylist(String url, SpotifyProgressiveCallback callback) {
         return CompletableFuture.supplyAsync(() -> {
             List<SpotifyMetadata> tracks = new ArrayList<>();
             String playlistName = "Spotify Playlist";
@@ -513,6 +522,12 @@ public class PlayerManager {
                         .compile("<meta property=\"og:title\" content=\"([^\"]+)\"").matcher(html);
                 if (nameMatcher.find()) {
                     playlistName = nameMatcher.group(1);
+                }
+                String playlistArtwork = null;
+                java.util.regex.Matcher imgMatcher = java.util.regex.Pattern
+                        .compile("<meta property=\"og:image\" content=\"([^\"]+)\"").matcher(html);
+                if (imgMatcher.find()) {
+                    playlistArtwork = imgMatcher.group(1);
                 }
 
                 // Parse initialState for tracks
@@ -563,23 +578,72 @@ public class PlayerManager {
 
                                         StringBuilder artistStr = new StringBuilder();
                                         com.fasterxml.jackson.databind.JsonNode artistItems = trackData.path("artists").path("items");
+                                        if (!artistItems.isArray() || artistItems.size() == 0) {
+                                            artistItems = trackData.path("artists");
+                                        }
                                         if (artistItems.isArray()) {
                                             for (int i = 0; i < artistItems.size(); i++) {
-                                                if (i > 0) artistStr.append(", ");
-                                                artistStr.append(artistItems.get(i).path("profile").path("name").asText(""));
+                                                com.fasterxml.jackson.databind.JsonNode aNode = artistItems.get(i);
+                                                String aName = aNode.path("profile").path("name").asText("");
+                                                if (aName.isEmpty()) aName = aNode.path("name").asText("");
+                                                if (aName.isEmpty()) aName = aNode.path("data").path("profile").path("name").asText("");
+                                                if (!aName.isEmpty()) {
+                                                    if (artistStr.length() > 0) artistStr.append(", ");
+                                                    artistStr.append(aName);
+                                                }
                                             }
                                         }
+                                        if (artistStr.length() == 0) artistStr.append("Spotify");
+
+                                        String trackId = trackData.path("id").asText("");
+                                        if (trackId.isEmpty()) {
+                                            String uri = trackData.path("uri").asText("");
+                                            if (uri.startsWith("spotify:track:")) {
+                                                trackId = uri.substring("spotify:track:".length());
+                                            }
+                                        }
+                                        String spotifyUrl = !trackId.isEmpty() ? "https://open.spotify.com/track/" + trackId : null;
+
+                                        String artwork = null;
+                                        com.fasterxml.jackson.databind.JsonNode images = trackData.path("album").path("images");
+                                        if (!images.isArray() || images.size() == 0) {
+                                            images = trackData.path("albumOfTrack").path("coverArt").path("sources");
+                                        }
+                                        if (!images.isArray() || images.size() == 0) {
+                                            images = trackData.path("albumOfTrack").path("images");
+                                        }
+                                        if (!images.isArray() || images.size() == 0) {
+                                            images = trackData.path("coverArt").path("sources");
+                                        }
+                                        if (images.isArray() && images.size() > 0) {
+                                            artwork = images.get(0).path("url").asText(null);
+                                        }
+                                        if (artwork == null || artwork.isEmpty()) {
+                                            artwork = playlistArtwork;
+                                        }
+
                                         long duration = trackData.path("duration").path("totalMilliseconds").asLong(0);
                                         if (duration == 0) {
                                             duration = trackData.path("duration_ms").asLong(0);
                                         }
-                                        tracks.add(new SpotifyMetadata("ytmsearch:" + name + " " + artistStr.toString(), name, artistStr.toString(), null, duration, null));
+
+                                        tracks.add(new SpotifyMetadata("ytmsearch:" + name + " " + artistStr.toString(), name, artistStr.toString(), artwork, duration, spotifyUrl));
                                     } catch (Exception e) {
                                         logger.debug("Spotify: Failed to parse track item", e);
                                     }
                                 }
                             }
                         }
+                    }
+                }
+                if (totalCount == 0) totalCount = tracks.size();
+
+                // Notify callback immediately with initial batch so playback starts instantly
+                if (callback != null && !tracks.isEmpty()) {
+                    try {
+                        callback.onBatch(new ArrayList<>(tracks), totalCount, playlistName);
+                    } catch (Exception e) {
+                        logger.error("Error in Spotify progressive callback for initial batch", e);
                     }
                 }
 
@@ -589,13 +653,12 @@ public class PlayerManager {
                     String token = getAnonymousSpotifyToken(id, isAlbum ? "album" : "playlist");
                     if (token != null) {
                         try {
-                            List<SpotifyMetadata> apiTracks = new ArrayList<>();
-                            String apiUrl = isAlbum
-                                    ? "https://api.spotify.com/v1/albums/" + id + "/tracks?limit=50"
-                                    : "https://api.spotify.com/v1/playlists/" + id + "/tracks?limit=100";
-
+                            int offset = tracks.size();
                             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                            while (apiUrl != null && !apiUrl.isEmpty() && !apiUrl.equals("null")) {
+                            while (offset < totalCount) {
+                                String apiUrl = isAlbum
+                                        ? "https://api.spotify.com/v1/albums/" + id + "/tracks?limit=50&offset=" + offset
+                                        : "https://api.spotify.com/v1/playlists/" + id + "/tracks?limit=100&offset=" + offset;
                                 java.net.http.HttpRequest apiReq = java.net.http.HttpRequest.newBuilder()
                                         .uri(java.net.URI.create(apiUrl))
                                         .header("Authorization", "Bearer " + token)
@@ -605,13 +668,13 @@ public class PlayerManager {
                                         .send(apiReq, java.net.http.HttpResponse.BodyHandlers.ofString());
                                 
                                 if (apiResp.statusCode() != 200) {
-                                    logger.warn("Spotify API returned {}, using scraped tracks", apiResp.statusCode());
+                                    logger.warn("Spotify API returned {} during progressive load, stopping pagination", apiResp.statusCode());
                                     break;
                                 }
                                 
                                 com.fasterxml.jackson.databind.JsonNode apiRoot = mapper.readTree(apiResp.body());
-
                                 com.fasterxml.jackson.databind.JsonNode items = apiRoot.path("items");
+                                List<SpotifyMetadata> pageTracks = new ArrayList<>();
                                 for (com.fasterxml.jackson.databind.JsonNode apiItem : items) {
                                     com.fasterxml.jackson.databind.JsonNode td = isAlbum ? apiItem : apiItem.path("track");
                                     if (td.isMissingNode() || td.isNull()) continue;
@@ -627,6 +690,7 @@ public class PlayerManager {
                                             artists.append(artistArr.get(i).path("name").asText(""));
                                         }
                                     }
+                                    if (artists.length() == 0) artists.append("Spotify");
 
                                     String artwork = null;
                                     if (!isAlbum) {
@@ -635,18 +699,32 @@ public class PlayerManager {
                                             artwork = images.get(0).path("url").asText(null);
                                         }
                                     }
-                                    long duration = td.path("duration_ms").asLong(0);
-                                    apiTracks.add(new SpotifyMetadata("ytmsearch:" + trackName + " " + artists, trackName, artists.toString(), artwork, duration, null));
-                                }
-                                apiUrl = apiRoot.path("next").asText(null);
-                            }
+                                    if (artwork == null || artwork.isEmpty()) {
+                                        artwork = playlistArtwork;
+                                    }
 
-                            if (!apiTracks.isEmpty()) {
-                                tracks = apiTracks;
-                                logger.info("Spotify: Fetched full {} tracks via anonymous token from '{}'", tracks.size(), playlistName);
+                                    String trackId = td.path("id").asText("");
+                                    String spotifyUrl = !trackId.isEmpty() ? "https://open.spotify.com/track/" + trackId : null;
+
+                                    long duration = td.path("duration_ms").asLong(0);
+                                    pageTracks.add(new SpotifyMetadata("ytmsearch:" + trackName + " " + artists, trackName, artists.toString(), artwork, duration, spotifyUrl));
+                                }
+                                if (pageTracks.isEmpty()) break;
+                                tracks.addAll(pageTracks);
+                                offset += pageTracks.size();
+
+                                if (callback != null) {
+                                    try {
+                                        callback.onBatch(pageTracks, totalCount, playlistName);
+                                    } catch (Exception e) {
+                                        logger.error("Error in Spotify progressive callback for pagination batch", e);
+                                    }
+                                }
+                                if (apiRoot.path("next").asText(null) == null || apiRoot.path("next").isNull()) break;
                             }
+                            logger.info("Spotify: Fetched full {} tracks via progressive pagination from '{}'", tracks.size(), playlistName);
                         } catch (Exception e) {
-                            logger.error("Spotify API pagination failed, using scraped tracks", e);
+                            logger.error("Spotify API pagination failed", e);
                         }
                     } else {
                         logger.warn("Spotify: '{}' has {} tracks but only {} loaded (could not get anonymous token).",
@@ -903,6 +981,10 @@ public class PlayerManager {
         MusicManager musicManager = getMusicManager(event.getGuild());
 
         if (trackUrl.contains("spotify.com")) {
+            if (trackUrl.contains("/playlist/") || trackUrl.contains("/album/")) {
+                loadAndPlay(event, trackUrl);
+                return;
+            }
             fetchSpotifyMetadata(trackUrl).thenAccept(meta -> {
                 if (meta != null) {
                     loadSpotifyTrackWithFallback(musicManager, meta, new AudioLoadResultHandler() {
@@ -1021,6 +1103,10 @@ public class PlayerManager {
         MusicManager musicManager = getMusicManager(event.getGuild());
 
         if (trackUrl.contains("spotify.com")) {
+            if (trackUrl.contains("/playlist/") || trackUrl.contains("/album/")) {
+                loadAndPlay(event, trackUrl);
+                return;
+            }
             fetchSpotifyMetadata(trackUrl).thenAccept(meta -> {
                 if (meta != null) {
                     loadSpotifyTrackWithFallback(musicManager, meta, new AudioLoadResultHandler() {
@@ -1158,6 +1244,21 @@ public class PlayerManager {
                     }
                 }
             }
+            if (encoded.startsWith("DEFERRED_V2|||")) {
+                String[] parts = encoded.split("\\|\\|\\|", 7);
+                if (parts.length >= 7) {
+                    String title = parts[1];
+                    String author = parts[2];
+                    long length = 0;
+                    try { length = Long.parseLong(parts[3]); } catch (NumberFormatException ignored) {}
+                    String uri = parts[4];
+                    String query = parts[5];
+                    String art = parts[6].equals("null") ? null : parts[6];
+                    com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo info = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
+                            title, author, length, uri, true, uri != null && !uri.isEmpty() ? uri : query);
+                    return new DeferredTrack(info, query, art);
+                }
+            }
             if (encoded.startsWith("DEFERRED|||") || encoded.startsWith("DEFERRED:")) {
                 String delimiter = encoded.contains("|||") ? "\\|\\|\\|" : ":";
                 String[] parts = encoded.split(delimiter, 3);
@@ -1194,7 +1295,13 @@ public class PlayerManager {
                 return "SPOTIFY_RESOLVED|||" + title + "|||" + author + "|||" + art + "|||" + uri + "|||" + delegateEncoded;
             }
             if (track instanceof DeferredTrack deferred) {
-                return "DEFERRED|||" + deferred.getQuery() + "|||" + (deferred.getArtworkUrl() == null ? "null" : deferred.getArtworkUrl());
+                String title = deferred.getInfo().title != null ? deferred.getInfo().title : "";
+                String author = deferred.getInfo().author != null ? deferred.getInfo().author : "";
+                long length = deferred.getInfo().length;
+                String uri = deferred.getInfo().uri != null ? deferred.getInfo().uri : "";
+                String query = deferred.getQuery() != null ? deferred.getQuery() : "";
+                String art = deferred.getArtworkUrl() != null ? deferred.getArtworkUrl() : "null";
+                return "DEFERRED_V2|||" + title + "|||" + author + "|||" + length + "|||" + uri + "|||" + query + "|||" + art;
             }
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             playerManager.encodeTrack(new com.sedmelluq.discord.lavaplayer.tools.io.MessageOutput(baos), track);

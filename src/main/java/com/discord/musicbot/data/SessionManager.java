@@ -161,4 +161,16 @@ public class SessionManager {
             }
         }
     }
+
+    public void shutdown() {
+        saveAllNow();
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
+    }
 }

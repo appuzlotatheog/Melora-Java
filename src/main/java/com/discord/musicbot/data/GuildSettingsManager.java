@@ -89,4 +89,16 @@ public class GuildSettingsManager {
     public void markDirty() {
         dirty.set(true);
     }
+
+    public void shutdown() {
+        save();
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
+    }
 }

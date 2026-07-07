@@ -97,19 +97,14 @@ public class BotLauncher {
                         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                                 logger.info("Shutting down bot...");
                                 PlayerManager.getInstance().shutdown();
-                                for (net.dv8tion.jda.api.entities.Guild guild : jda.getGuilds()) {
-                                        try {
-                                                if (guild.getSelfMember().getVoiceState() != null && guild.getSelfMember().getVoiceState().inAudioChannel()) {
-                                                        guild.getAudioManager().closeAudioConnection();
-                                                        jda.getDirectAudioController().disconnect(guild);
-                                                }
-                                        } catch (Exception ignored) {}
-                                }
-                                com.discord.musicbot.data.SessionManager.getInstance().saveAllNow();
-                                com.discord.musicbot.data.PlaylistManager.getInstance().flushAll();
-                                com.discord.musicbot.data.StatsManager.getInstance().flushAll();
-                                com.discord.musicbot.data.HistoryManager.getInstance().flushAll();
-                                com.discord.musicbot.data.GuildSettingsManager.getInstance().save();
+                                com.discord.musicbot.data.SessionManager.getInstance().shutdown();
+                                com.discord.musicbot.data.PlaylistManager.getInstance().shutdown();
+                                com.discord.musicbot.data.StatsManager.getInstance().shutdown();
+                                com.discord.musicbot.data.HistoryManager.getInstance().shutdown();
+                                com.discord.musicbot.data.GuildSettingsManager.getInstance().shutdown();
+                                com.discord.musicbot.data.SavedQueueManager.getInstance().shutdown();
+                                com.discord.musicbot.data.UserExcludeManager.getInstance().shutdown();
+                                com.discord.musicbot.data.DatabaseManager.getInstance().shutdown();
                                 if (activityExecutor != null) {
                                         activityExecutor.shutdownNow();
                                 }
