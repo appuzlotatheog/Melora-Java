@@ -438,7 +438,7 @@ public class PlayerManager {
 
     public CompletableFuture<List<AudioTrack>> searchYouTube(String query) {
         CompletableFuture<List<AudioTrack>> future = new CompletableFuture<>();
-        String searchQuery = query.startsWith("ytsearch:") ? query : "ytsearch:" + query;
+        String searchQuery = query.startsWith("ytmsearch:") ? query : "ytmsearch:" + query;
         CompletableFuture.runAsync(() -> {
             try {
                 playerManager.loadItemOrdered(this, searchQuery, new AudioLoadResultHandler() {

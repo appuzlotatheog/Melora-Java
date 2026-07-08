@@ -597,7 +597,7 @@ public class TrackScheduler extends AudioEventAdapter {
                         logger.info("[AutoPlay] Found: \"{}\" by {} (Score: {})",
                                 selected.getInfo().title, selected.getInfo().author,
                                 getAutoplayScore(selected, artist));
-                        return resolveWithSpotifyMetadata(selected, artist);
+                        return cleanTrackForAutoplay(selected, artist);
                     }
                 }
             } catch (Exception e) {
@@ -615,7 +615,7 @@ public class TrackScheduler extends AudioEventAdapter {
                         .findFirst().orElse(null);
                 if (valid != null) {
                     playedAutoplayUris.add(valid.getInfo().uri);
-                    return resolveWithSpotifyMetadata(valid, artist);
+                    return cleanTrackForAutoplay(valid, artist);
                 }
             }
         } catch (Exception e) {
@@ -675,7 +675,7 @@ public class TrackScheduler extends AudioEventAdapter {
                         logger.info("[RandomPlay] Found: \"{}\" by {} (Score: {})",
                                 selected.getInfo().title, selected.getInfo().author,
                                 getAutoplayScore(selected, artist));
-                        return resolveWithSpotifyMetadata(selected, artist);
+                        return cleanTrackForAutoplay(selected, artist);
                     }
                 }
             } catch (Exception e) {
@@ -693,7 +693,7 @@ public class TrackScheduler extends AudioEventAdapter {
                 if (!validList.isEmpty()) {
                     AudioTrack valid = validList.get(new Random().nextInt(validList.size()));
                     playedAutoplayUris.add(valid.getInfo().uri);
-                    return resolveWithSpotifyMetadata(valid, artist);
+                    return cleanTrackForAutoplay(valid, artist);
                 }
             }
         } catch (Exception ignored) {
@@ -703,34 +703,12 @@ public class TrackScheduler extends AudioEventAdapter {
         return null;
     }
 
-    private AudioTrack resolveWithSpotifyMetadata(AudioTrack track, String fallbackArtist) {
-        if (track == null || track instanceof com.discord.musicbot.audio.SpotifyResolvedTrack) return track;
-        try {
-            String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().title);
-            String cleanArtist = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().author);
-            if (cleanArtist == null || cleanArtist.isEmpty() || cleanArtist.equalsIgnoreCase("Topic") || cleanArtist.equalsIgnoreCase("Various Artists")) {
-                cleanArtist = fallbackArtist != null ? fallbackArtist : "Spotify";
-            }
-            java.util.List<com.discord.musicbot.audio.PlayerManager.SpotifyMetadata> metaList = com.discord.musicbot.audio.PlayerManager.getInstance().searchSpotify(cleanTitle + " " + cleanArtist).get(4, java.util.concurrent.TimeUnit.SECONDS);
-            if (metaList != null && !metaList.isEmpty()) {
-                com.discord.musicbot.audio.PlayerManager.SpotifyMetadata meta = metaList.get(0);
-                String uri = (meta.spotifyUrl() != null && meta.spotifyUrl().contains("/track/")) ? meta.spotifyUrl() : "ytmsearch:" + meta.title() + " " + (meta.artist() != null ? meta.artist() : "");
-                com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo spotifyInfo = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
-                        com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(meta.title()),
-                        com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(meta.artist() != null ? meta.artist() : cleanArtist),
-                        meta.duration() > 0 ? meta.duration() : track.getDuration(),
-                        "spotify",
-                        false,
-                        uri
-                );
-                return new com.discord.musicbot.audio.SpotifyResolvedTrack(spotifyInfo, track, meta.artworkUrl());
-            }
-        } catch (Exception e) {
-            logger.debug("Could not resolve Spotify metadata for autoplay track: {}", e.getMessage());
-        }
+    private AudioTrack cleanTrackForAutoplay(AudioTrack track, String fallbackArtist) {
+        if (track == null) return null;
+        if (track instanceof com.discord.musicbot.audio.SpotifyResolvedTrack) return track;
         String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().title);
         String cleanArtist = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().author);
-        if (cleanArtist == null || cleanArtist.isEmpty() || cleanArtist.equalsIgnoreCase("Topic")) {
+        if (cleanArtist == null || cleanArtist.isEmpty() || cleanArtist.equalsIgnoreCase("Topic") || cleanArtist.equalsIgnoreCase("Various Artists")) {
             cleanArtist = fallbackArtist != null ? fallbackArtist : "Unknown Artist";
         }
         com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo cleanedInfo = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
@@ -741,7 +719,9 @@ public class TrackScheduler extends AudioEventAdapter {
                 track.getInfo().isStream,
                 track.getInfo().uri
         );
-        return new com.discord.musicbot.audio.SpotifyResolvedTrack(cleanedInfo, track, null);
+        com.discord.musicbot.audio.SpotifyResolvedTrack cleaned = new com.discord.musicbot.audio.SpotifyResolvedTrack(cleanedInfo, track, null);
+        cleaned.setUserData(track.getUserData());
+        return cleaned;
     }
 
     private List<AudioTrack> loadTracks(String query) {
