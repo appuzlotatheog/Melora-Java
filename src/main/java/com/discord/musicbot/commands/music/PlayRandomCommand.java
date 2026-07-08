@@ -47,8 +47,8 @@ public class PlayRandomCommand extends SlashCommand {
                 return;
             }
             PlaylistTrack pt = favs.getTracks().get(random.nextInt(favs.getTracks().size()));
-            trackQuery = pt.getUri() != null ? pt.getUri() : pt.getTitle() + " " + pt.getAuthor();
-            trackTitle = pt.getTitle();
+            trackQuery = (pt.getUri() != null && pt.getUri().contains("spotify.com")) ? pt.getUri() : PlayerManager.cleanTrackTitle(pt.getTitle()) + " " + PlayerManager.cleanTrackTitle(pt.getAuthor());
+            trackTitle = PlayerManager.cleanTrackTitle(pt.getTitle());
         } else {
             List<HistoryEntry> history = HistoryManager.getInstance().getRecent(200);
             if (history.isEmpty()) {
@@ -56,8 +56,8 @@ public class PlayRandomCommand extends SlashCommand {
                 return;
             }
             HistoryEntry he = history.get(random.nextInt(history.size()));
-            trackQuery = he.uri != null ? he.uri : he.title + " " + he.author;
-            trackTitle = he.title;
+            trackQuery = (he.uri != null && he.uri.contains("spotify.com")) ? he.uri : PlayerManager.cleanTrackTitle(he.title) + " " + PlayerManager.cleanTrackTitle(he.author);
+            trackTitle = PlayerManager.cleanTrackTitle(he.title);
         }
 
         final String finalQuery = trackQuery;

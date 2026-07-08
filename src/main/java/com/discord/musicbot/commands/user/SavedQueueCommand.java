@@ -42,12 +42,14 @@ public class SavedQueueCommand extends SlashCommand {
                 String name = ctx.getOption("name").getAsString();
                 List<PlaylistTrack> pTracks = new ArrayList<>();
                 for (AudioTrack t : queue) {
+                    String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(t.getInfo().title);
+                    String cleanAuthor = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(t.getInfo().author);
                     pTracks.add(new PlaylistTrack(
-                            t.getInfo().title,
-                            t.getInfo().author,
+                            cleanTitle,
+                            cleanAuthor,
                             t.getDuration(),
                             t.getInfo().uri,
-                            t.getInfo().uri != null ? t.getInfo().uri : "ytmsearch:" + t.getInfo().title + " " + t.getInfo().author,
+                            t.getInfo().uri != null ? t.getInfo().uri : "ytsearch:" + cleanTitle + " " + cleanAuthor,
                             null
                     ));
                 }

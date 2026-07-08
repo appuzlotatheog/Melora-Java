@@ -152,7 +152,7 @@ public class EmbedHelper {
 
         for (int i = start; i < end; i++) {
             AudioTrack track = queue.get(i);
-            String trackTitle = track.getInfo().title;
+            String trackTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().title);
             if (trackTitle.length() > 30) {
                 trackTitle = trackTitle.substring(0, 27) + "...";
             }
@@ -162,7 +162,7 @@ public class EmbedHelper {
                 url = "https://open.spotify.com/search/" + java.net.URLEncoder.encode(trackTitle, java.nio.charset.StandardCharsets.UTF_8);
             } else if (url.startsWith("ytsearch:") || url.startsWith("ytmsearch:")) {
                 String raw = url.startsWith("ytmsearch:") ? url.substring("ytmsearch:".length()) : url.substring("ytsearch:".length());
-                url = "https://open.spotify.com/search/" + java.net.URLEncoder.encode(raw, java.nio.charset.StandardCharsets.UTF_8);
+                url = "https://open.spotify.com/search/" + java.net.URLEncoder.encode(com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(raw), java.nio.charset.StandardCharsets.UTF_8);
             }
             trackTitle = escapeMarkdown(trackTitle);
             
@@ -498,13 +498,13 @@ public class EmbedHelper {
             int end = Math.min(start + 10, totalTracks);
             for (int i = start; i < end; i++) {
                 com.discord.musicbot.data.HistoryManager.HistoryEntry t = history.get(i);
-                String title = t.title;
+                String title = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(t.title);
                 if (title.length() > 50) title = title.substring(0, 47) + "...";
                 
                 String url = t.uri;
                 if (url == null || url.startsWith("ytsearch:") || url.startsWith("ytmsearch:")) {
                     String raw = url != null && url.startsWith("ytmsearch:") ? url.substring("ytmsearch:".length()) : (url != null && url.startsWith("ytsearch:") ? url.substring("ytsearch:".length()) : title);
-                    url = "https://open.spotify.com/search/" + java.net.URLEncoder.encode(raw, java.nio.charset.StandardCharsets.UTF_8);
+                    url = "https://open.spotify.com/search/" + java.net.URLEncoder.encode(com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(raw), java.nio.charset.StandardCharsets.UTF_8);
                 }
                 
                 content.append(String.format("`%d.` [**%s**](%s)\n", i + 1, escapeMarkdown(title), url));

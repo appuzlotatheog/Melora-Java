@@ -161,30 +161,40 @@ public class AutocompleteHandler {
         for (HistoryManager.HistoryEntry h : history) {
             if (choices.size() >= 25)
                 break;
-            String label = "🕛 " + (h.title.length() > 90 ? h.title.substring(0, 90) + "..." : h.title);
+            String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(h.title);
+            String cleanAuthor = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(h.author);
+            String label = "🕛 " + (cleanTitle.length() > 90 ? cleanTitle.substring(0, 90) + "..." : cleanTitle);
             String choiceVal = (h.uri != null && (h.uri.contains("spotify.com") || h.uri.contains("youtube.com") || h.uri.contains("youtu.be") || h.uri.startsWith("http") || h.uri.startsWith("ytmsearch:") || h.uri.startsWith("ytsearch:")))
-                    ? h.title + " " + h.author
+                    ? cleanTitle + " " + cleanAuthor
                     : h.uri;
-            if (choiceVal == null || choiceVal.trim().isEmpty()) choiceVal = h.title;
+            if (choiceVal == null || choiceVal.trim().isEmpty()) choiceVal = cleanTitle;
             if (choiceVal.length() > 100) choiceVal = choiceVal.substring(0, 100);
             choices.add(new Command.Choice(label, choiceVal));
         }
 
         // If user typed something, search Spotify for exact studio song titles and artists
         if (value.length() >= 2 && !value.startsWith("http") && !value.startsWith("scsearch:") && !value.startsWith("ytsearch:") && !value.startsWith("ytmsearch:")) {
-            final List<Command.Choice> finalChoices = new ArrayList<>(choices);
+            final List<Command.Choice> historyChoices = new ArrayList<>(choices);
             com.discord.musicbot.audio.PlayerManager.getInstance().searchSpotify(value).thenAccept(results -> {
+                List<Command.Choice> spotifyChoices = new ArrayList<>();
                 for (com.discord.musicbot.audio.PlayerManager.SpotifyMetadata meta : results) {
-                    if (finalChoices.size() >= 25) break;
+                    if (spotifyChoices.size() >= 25) break;
                     String label = "🎵 " + meta.title() + " — " + meta.artist();
                     if (label.length() > 95) label = label.substring(0, 95) + "...";
                     String val = meta.title() + " " + meta.artist();
                     if (val.length() > 100) val = val.substring(0, 100);
-                    finalChoices.add(new Command.Choice(label, val));
+                    spotifyChoices.add(new Command.Choice(label, val));
                 }
-                event.replyChoices(finalChoices).queue();
+                for (Command.Choice hc : historyChoices) {
+                    if (spotifyChoices.size() >= 25) break;
+                    boolean exists = spotifyChoices.stream().anyMatch(c -> c.getName().equals(hc.getName()) || c.getAsString().equals(hc.getAsString()));
+                    if (!exists) {
+                        spotifyChoices.add(hc);
+                    }
+                }
+                event.replyChoices(spotifyChoices).queue();
             }).exceptionally(ex -> {
-                event.replyChoices(finalChoices).queue();
+                event.replyChoices(historyChoices).queue();
                 return null;
             });
             return; // Return early because reply is handled asynchronously

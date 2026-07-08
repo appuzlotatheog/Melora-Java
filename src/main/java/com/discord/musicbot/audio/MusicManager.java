@@ -336,7 +336,7 @@ public class MusicManager {
     }
 
     /**
-     * Connect to voice channel and enforce 96kbps audio bitrate if permitted.
+     * Connect to voice channel without altering channel bitrate.
      */
     public void connectToVoiceChannel(net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion vc) {
         this.isDeliberateDisconnect = false;
@@ -345,22 +345,6 @@ public class MusicManager {
         }
         guild.getAudioManager().setSelfDeafened(true);
         guild.getAudioManager().openAudioConnection(vc);
-        
-        if (guild.getSelfMember().hasPermission(vc, net.dv8tion.jda.api.Permission.MANAGE_CHANNEL)) {
-            if (vc instanceof net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel voiceChannel) {
-                if (voiceChannel.getBitrate() < 96000) {
-                    try {
-                        voiceChannel.getManager().setBitrate(96000).queue(
-                                null, 
-                                err -> logger.warn("Failed to set channel bitrate for {}", vc.getName())
-                        );
-                        logger.info("Upgraded voice channel {} bitrate to 96kbps for high fidelity audio.", vc.getName());
-                    } catch (Exception e) {
-                        logger.warn("Could not set bitrate for channel {}", vc.getName());
-                    }
-                }
-            }
-        }
         
         updateVoiceChannelStatus(com.discord.musicbot.config.EmojiConfig.getInstance().music + " Playing music!");
     }
@@ -563,7 +547,7 @@ public class MusicManager {
         if (track == null)
             return null;
 
-        String title = track.getInfo().title;
+        String title = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().title);
         if (title.length() > 35) {
             title = title.substring(0, 35) + "...";
         }
@@ -785,7 +769,7 @@ public class MusicManager {
 
             String status = "";
             if (currentTrack != null && !scheduler.isPaused()) {
-                String title = currentTrack.getInfo().title;
+                String title = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(currentTrack.getInfo().title);
                 boolean isMewsic = false;
                 if (currentTrack.getUserData() instanceof String udStr) {
                     if (udStr.contains("\"mewsic\":true")) {

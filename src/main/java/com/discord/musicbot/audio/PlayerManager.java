@@ -277,7 +277,7 @@ public class PlayerManager {
                     try {
                         String apiUrl = "https://api.spotify.com/v1/search?q="
                                 + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8)
-                                + "&type=track&limit=10";
+                                + "&type=track&limit=25";
                         java.net.http.HttpRequest apiReq = java.net.http.HttpRequest.newBuilder()
                                 .uri(java.net.URI.create(apiUrl))
                                 .header("Authorization", "Bearer " + token)
@@ -315,7 +315,7 @@ public class PlayerManager {
                                     }
                                     String spotifyUrl = !id.isEmpty() ? "https://open.spotify.com/track/" + id : null;
                                     if (!title.isEmpty() && duration > 0) {
-                                        results.add(new SpotifyMetadata("ytmsearch:" + title + " " + artists, title, artists.toString(), artwork, duration, spotifyUrl));
+                                        results.add(new SpotifyMetadata("ytsearch:" + cleanTrackTitle(title) + " " + cleanTrackTitle(artists.toString()), cleanTrackTitle(title), cleanTrackTitle(artists.toString()), artwork, duration, spotifyUrl));
                                     }
                                 }
                             }
@@ -356,8 +356,8 @@ public class PlayerManager {
                             if (artwork != null) {
                                 artwork = artwork.replace("100x100bb.jpg", "600x600bb.jpg");
                             }
-                            if (!title.isEmpty() && duration > 0 && results.size() < 10) {
-                                results.add(new SpotifyMetadata("ytmsearch:" + title + " " + artist, title, artist, artwork, duration, null));
+                            if (!title.isEmpty() && duration > 0 && results.size() < 25) {
+                                results.add(new SpotifyMetadata("ytsearch:" + cleanTrackTitle(title) + " " + cleanTrackTitle(artist), cleanTrackTitle(title), cleanTrackTitle(artist), artwork, duration, null));
                             }
                         }
                     }
@@ -367,6 +367,17 @@ public class PlayerManager {
             }
             return results;
         }, ioExecutor);
+    }
+
+    public static String cleanTrackTitle(String title) {
+        if (title == null || title.isBlank()) return "";
+        String cleaned = title.replaceAll("(?i)<yts>|\\(yts\\)|\\[yts\\]|\\byts\\b", "")
+                .replaceAll("(?i)\\b(official\\s*music\\s*video|official\\s*video|official\\s*audio|lyric\\s*video|lyrics|audio|video|hq|hd|4k|live|remastered|visualizer)\\b", "")
+                .replaceAll("[\\[\\(<>{}]+\\s*[\\]\\)>}{]]+", "")
+                .replaceAll("\\s+-\\s+$", "")
+                .replaceAll("(?i)\\s*-\\s*topic$", "")
+                .replaceAll("\\s+", " ").trim();
+        return cleaned.isEmpty() ? title.trim() : cleaned;
     }
 
     public static com.sedmelluq.discord.lavaplayer.track.AudioTrack matchSpotifyToYoutube(
@@ -392,8 +403,8 @@ public class PlayerManager {
             else if (diff <= 15000) score += 10;
             else if (diff > 25000) score -= 100;
 
-            String candTitle = track.getInfo().title.toLowerCase();
-            String candAuthor = track.getInfo().author.toLowerCase();
+            String candTitle = cleanTrackTitle(track.getInfo().title).toLowerCase();
+            String candAuthor = cleanTrackTitle(track.getInfo().author).toLowerCase();
 
             if (candTitle.contains(lowerTitle) || lowerTitle.contains(candTitle)) {
                 score += 40;
@@ -424,10 +435,10 @@ public class PlayerManager {
     }
 
     public void loadSpotifyTrackWithFallback(MusicManager musicManager, SpotifyMetadata meta, com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler handler) {
-        String query = meta.query() != null ? meta.query() : "ytmsearch:" + meta.title() + " " + meta.artist();
-        String uri = (meta.spotifyUrl() != null && meta.spotifyUrl().contains("/track/")) ? meta.spotifyUrl() : "ytmsearch:" + meta.title() + " " + (meta.artist() != null ? meta.artist() : "");
+        String query = meta.query() != null ? meta.query().replace("ytmsearch:", "ytsearch:") : "ytsearch:" + meta.title() + " " + meta.artist();
+        String uri = (meta.spotifyUrl() != null && meta.spotifyUrl().contains("/track/")) ? meta.spotifyUrl() : "ytsearch:" + meta.title() + " " + (meta.artist() != null ? meta.artist() : "");
         com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo spotifyInfo = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
-                meta.title(), meta.artist() != null ? meta.artist() : "Spotify", meta.duration(), "spotify", false, uri);
+                cleanTrackTitle(meta.title()), cleanTrackTitle(meta.artist() != null ? meta.artist() : "Spotify"), meta.duration(), "spotify", false, uri);
 
         loadItemWithFallback(musicManager, query, new com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler() {
             @Override
@@ -504,7 +515,7 @@ public class PlayerManager {
                                 art = imgs.get(0).path("url").asText(null);
                             }
                             if (!tTitle.isEmpty() && dur > 0) {
-                                return new SpotifyMetadata("ytmsearch:" + tTitle + " " + artists, tTitle, artists.toString(), art, dur, url);
+                                return new SpotifyMetadata("ytsearch:" + cleanTrackTitle(tTitle) + " " + cleanTrackTitle(artists.toString()), cleanTrackTitle(tTitle), cleanTrackTitle(artists.toString()), art, dur, url);
                             }
                         }
                     } catch (Exception ignored) {}
@@ -557,7 +568,7 @@ public class PlayerManager {
                 }
 
                 if (!title.isEmpty()) {
-                    return new SpotifyMetadata("ytmsearch:" + title + " " + artist, title, artist, artworkUrl, duration, url);
+                    return new SpotifyMetadata("ytsearch:" + cleanTrackTitle(title) + " " + cleanTrackTitle(artist), cleanTrackTitle(title), cleanTrackTitle(artist), artworkUrl, duration, url);
                 }
             } catch (Exception e) {
                 logger.error("Failed to fetch Spotify URL: " + url, e);
@@ -729,7 +740,7 @@ public class PlayerManager {
                                             duration = trackData.path("duration_ms").asLong(0);
                                         }
 
-                                        tracks.add(new SpotifyMetadata("ytmsearch:" + name + " " + artistStr.toString(), name, artistStr.toString(), artwork, duration, spotifyUrl));
+                                        tracks.add(new SpotifyMetadata("ytsearch:" + cleanTrackTitle(name) + " " + cleanTrackTitle(artistStr.toString()), cleanTrackTitle(name), cleanTrackTitle(artistStr.toString()), artwork, duration, spotifyUrl));
                                     } catch (Exception e) {
                                         logger.debug("Spotify: Failed to parse track item", e);
                                     }
@@ -809,7 +820,7 @@ public class PlayerManager {
                                     String spotifyUrl = !trackId.isEmpty() ? "https://open.spotify.com/track/" + trackId : null;
 
                                     long duration = td.path("duration_ms").asLong(0);
-                                    pageTracks.add(new SpotifyMetadata("ytmsearch:" + trackName + " " + artists, trackName, artists.toString(), artwork, duration, spotifyUrl));
+                                    pageTracks.add(new SpotifyMetadata("ytsearch:" + cleanTrackTitle(trackName) + " " + cleanTrackTitle(artists.toString()), cleanTrackTitle(trackName), cleanTrackTitle(artists.toString()), artwork, duration, spotifyUrl));
                                 }
                                 if (pageTracks.isEmpty()) break;
                                 tracks.addAll(pageTracks);
@@ -844,7 +855,7 @@ public class PlayerManager {
     }
 
     public void loadItemWithFallback(Object orderingKey, String query, AudioLoadResultHandler handler) {
-        if (query.startsWith("ytmsearch:")) {
+        if (query.startsWith("ytsearch:")) {
             playerManager.loadItemOrdered(orderingKey, query, new AudioLoadResultHandler() {
                 @Override
                 public void trackLoaded(AudioTrack track) {
@@ -862,19 +873,22 @@ public class PlayerManager {
 
                 @Override
                 public void noMatches() {
-                    String fallbackQuery = "ytsearch:" + query.substring("ytmsearch:".length());
+                    String fallbackQuery = "ytmsearch:" + query.substring("ytsearch:".length());
                     playerManager.loadItemOrdered(orderingKey, fallbackQuery, handler);
                 }
 
                 @Override
                 public void loadFailed(FriendlyException exception) {
-                    String fallbackQuery = "ytsearch:" + query.substring("ytmsearch:".length());
+                    String fallbackQuery = "ytmsearch:" + query.substring("ytsearch:".length());
                     playerManager.loadItemOrdered(orderingKey, fallbackQuery, handler);
                 }
             });
+        } else if (query.startsWith("ytmsearch:")) {
+            String fallbackQuery = "ytsearch:" + query.substring("ytmsearch:".length());
+            loadItemWithFallback(orderingKey, fallbackQuery, handler);
         } else {
             boolean isDirectUrl = query.startsWith("http://") || query.startsWith("https://") || query.contains("://") || query.startsWith("scsearch:") || query.startsWith("ytsearch:") || query.startsWith("ytmsearch:");
-            String targetQuery = isDirectUrl ? query : "ytmsearch:" + query;
+            String targetQuery = isDirectUrl ? query : "ytsearch:" + query;
             playerManager.loadItemOrdered(orderingKey, targetQuery, handler);
         }
     }
@@ -892,7 +906,7 @@ public class PlayerManager {
                     List<AudioTrack> fakeTracks = new ArrayList<>();
                     for (SpotifyMetadata meta : result.tracks()) {
                         com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo info = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
-                                meta.title(), meta.artist() != null ? meta.artist() : "Spotify", meta.duration(), "spotify", false, meta.spotifyUrl() != null ? meta.spotifyUrl() : meta.query());
+                                cleanTrackTitle(meta.title()), cleanTrackTitle(meta.artist() != null ? meta.artist() : "Spotify"), meta.duration(), "spotify", false, meta.spotifyUrl() != null ? meta.spotifyUrl() : meta.query());
                         fakeTracks.add(new DeferredTrack(info, meta.query(), meta.artworkUrl()));
                     }
                     com.sedmelluq.discord.lavaplayer.track.BasicAudioPlaylist fakePlaylist =
@@ -911,7 +925,8 @@ public class PlayerManager {
         } else {
             boolean isDirectUrl = trackUrl.startsWith("http://") || trackUrl.startsWith("https://") || trackUrl.contains("://") || trackUrl.startsWith("scsearch:") || trackUrl.startsWith("ytsearch:") || trackUrl.startsWith("ytmsearch:");
             if (!isDirectUrl) {
-                searchSpotify(trackUrl).thenAccept(results -> {
+                String cleanQuery = cleanTrackTitle(trackUrl);
+                searchSpotify(cleanQuery).thenAccept(results -> {
                     if (results != null && !results.isEmpty()) {
                         loadSpotifyTrackWithFallback(musicManager, results.get(0), new AudioLoadResultHandler() {
                             @Override
@@ -924,19 +939,19 @@ public class PlayerManager {
                             }
                             @Override
                             public void noMatches() {
-                                loadItemWithFallback(musicManager, "ytmsearch:" + trackUrl, handler);
+                                loadItemWithFallback(musicManager, "ytsearch:" + cleanQuery, handler);
                             }
                             @Override
                             public void loadFailed(FriendlyException exception) {
-                                loadItemWithFallback(musicManager, "ytmsearch:" + trackUrl, handler);
+                                loadItemWithFallback(musicManager, "ytsearch:" + cleanQuery, handler);
                             }
                         });
                     } else {
-                        loadItemWithFallback(musicManager, "ytmsearch:" + trackUrl, handler);
+                        loadItemWithFallback(musicManager, "ytsearch:" + cleanQuery, handler);
                     }
                 }).exceptionally(ex -> {
-                    logger.warn("searchSpotify failed for url: {}, falling back to ytmsearch", trackUrl, ex);
-                    loadItemWithFallback(musicManager, "ytmsearch:" + trackUrl, handler);
+                    logger.warn("searchSpotify failed for url: {}, falling back to ytsearch", trackUrl, ex);
+                    loadItemWithFallback(musicManager, "ytsearch:" + cleanQuery, handler);
                     return null;
                 });
             } else {
@@ -1048,19 +1063,19 @@ public class PlayerManager {
                             }
                             @Override
                             public void noMatches() {
-                                executeLoadAndPlay(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                                executeLoadAndPlay(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                             }
                             @Override
                             public void loadFailed(FriendlyException exception) {
-                                executeLoadAndPlay(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                                executeLoadAndPlay(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                             }
                         });
                     } else {
-                        executeLoadAndPlay(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                        executeLoadAndPlay(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                     }
                 }).exceptionally(ex -> {
-                    logger.warn("searchSpotify failed for play command: {}, falling back to ytmsearch", trackUrl, ex);
-                    executeLoadAndPlay(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                    logger.warn("searchSpotify failed for play command: {}, falling back to ytsearch", trackUrl, ex);
+                    executeLoadAndPlay(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                     return null;
                 });
             } else {
@@ -1152,25 +1167,26 @@ public class PlayerManager {
                         }
                         @Override
                         public void noMatches() {
-                            executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                            executeLoadAndPlayInstant(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                         }
                         @Override
                         public void loadFailed(FriendlyException exception) {
-                            executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                            executeLoadAndPlayInstant(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                         }
                     });
                 } else {
                     executeLoadAndPlayInstant(event, trackUrl, forcedArtworkUrl, musicManager);
                 }
             }).exceptionally(ex -> {
-                logger.warn("searchSpotify failed for instant play command: {}, falling back to ytmsearch", trackUrl, ex);
-                executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                logger.warn("searchSpotify failed for instant play command: {}, falling back to ytsearch", trackUrl, ex);
+                executeLoadAndPlayInstant(event, "ytsearch:" + trackUrl, forcedArtworkUrl, musicManager);
                 return null;
             });
         } else {
             boolean isDirectUrl = trackUrl.startsWith("http://") || trackUrl.startsWith("https://") || trackUrl.contains("://") || trackUrl.startsWith("scsearch:") || trackUrl.startsWith("ytsearch:") || trackUrl.startsWith("ytmsearch:");
             if (!isDirectUrl) {
-                searchSpotify(trackUrl).thenAccept(results -> {
+                String cleanQuery = cleanTrackTitle(trackUrl);
+                searchSpotify(cleanQuery).thenAccept(results -> {
                     if (results != null && !results.isEmpty()) {
                         loadSpotifyTrackWithFallback(musicManager, results.get(0), new AudioLoadResultHandler() {
                             @Override
@@ -1189,19 +1205,19 @@ public class PlayerManager {
                             }
                             @Override
                             public void noMatches() {
-                                executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                                executeLoadAndPlayInstant(event, "ytsearch:" + cleanQuery, forcedArtworkUrl, musicManager);
                             }
                             @Override
                             public void loadFailed(FriendlyException exception) {
-                                executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                                executeLoadAndPlayInstant(event, "ytsearch:" + cleanQuery, forcedArtworkUrl, musicManager);
                             }
                         });
                     } else {
-                        executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                        executeLoadAndPlayInstant(event, "ytsearch:" + cleanQuery, forcedArtworkUrl, musicManager);
                     }
                 }).exceptionally(ex -> {
-                    logger.warn("searchSpotify failed for instant play: {}, falling back to ytmsearch", trackUrl, ex);
-                    executeLoadAndPlayInstant(event, "ytmsearch:" + trackUrl, forcedArtworkUrl, musicManager);
+                    logger.warn("searchSpotify failed for instant play: {}, falling back to ytsearch", trackUrl, ex);
+                    executeLoadAndPlayInstant(event, "ytsearch:" + cleanQuery, forcedArtworkUrl, musicManager);
                     return null;
                 });
             } else {
@@ -1326,19 +1342,19 @@ public class PlayerManager {
                             }
                             @Override
                             public void noMatches() {
-                                executeLoadAndInsert(event, "ytmsearch:" + trackUrl, position, musicManager);
+                                executeLoadAndInsert(event, "ytsearch:" + trackUrl, position, musicManager);
                             }
                             @Override
                             public void loadFailed(FriendlyException exception) {
-                                executeLoadAndInsert(event, "ytmsearch:" + trackUrl, position, musicManager);
+                                executeLoadAndInsert(event, "ytsearch:" + trackUrl, position, musicManager);
                             }
                         });
                     } else {
-                        executeLoadAndInsert(event, "ytmsearch:" + trackUrl, position, musicManager);
+                        executeLoadAndInsert(event, "ytsearch:" + trackUrl, position, musicManager);
                     }
                 }).exceptionally(ex -> {
-                    logger.warn("searchSpotify failed for insert command: {}, falling back to ytmsearch", trackUrl, ex);
-                    executeLoadAndInsert(event, "ytmsearch:" + trackUrl, position, musicManager);
+                    logger.warn("searchSpotify failed for insert command: {}, falling back to ytsearch", trackUrl, ex);
+                    executeLoadAndInsert(event, "ytsearch:" + trackUrl, position, musicManager);
                     return null;
                 });
             } else {
@@ -1434,7 +1450,7 @@ public class PlayerManager {
                     String query = parts[1];
                     String art = parts[2].equals("null") ? null : parts[2];
                     com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo info = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
-                            query.replace("ytsearch:", "").replace("ytmsearch:", ""), "Spotify", 0, "spotify", true, query);
+                            cleanTrackTitle(query.replace("ytsearch:", "").replace("ytmsearch:", "")), "Spotify", 0, "spotify", true, query);
                     return new DeferredTrack(info, query, art);
                 }
             }

@@ -217,7 +217,7 @@ public class MewsicCommand extends SlashCommand {
                     if (sourceId != null && !sourceId.isEmpty()) {
                         pt.setUri("https://www.youtube.com/watch?v=" + sourceId);
                     } else {
-                        pt.setUri("ytmsearch:" + artist + " - " + title);
+                        pt.setUri("ytsearch:" + com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(artist) + " - " + com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(title));
                     }
                     
                     if (!pt.getTitle().isEmpty()) {
@@ -319,17 +319,19 @@ public class MewsicCommand extends SlashCommand {
                         uri = "https://www.youtube.com/watch?v=" + sourceId;
                     }
 
+                    String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(title);
+                    String cleanArtist = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(artist);
                     com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo info = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
-                            title,
-                            artist,
+                            cleanTitle,
+                            cleanArtist,
                             duration,
-                            uri != null ? uri : title,
+                            uri != null ? uri : cleanTitle,
                             false,
                             uri,
                             null,
                             null
                     );
-                    String query = uri != null ? uri : "ytmsearch:" + artist + " - " + title;
+                    String query = uri != null ? uri : "ytsearch:" + cleanArtist + " - " + cleanTitle;
                     
                     com.sedmelluq.discord.lavaplayer.track.AudioTrack track = new com.discord.musicbot.audio.DeferredTrack(info, query, null);
                     track.setUserData("{\"requester\":\"" + ctx.getUser().getId() + "\", \"mewsic\":true}");

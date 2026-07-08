@@ -63,10 +63,10 @@ public class AutoplayCommand extends SlashCommand {
 
         // Build a search query from the history entry
         String query;
-        if (seed.uri != null && seed.uri.startsWith("http")) {
+        if (seed.uri != null && seed.uri.contains("spotify.com")) {
             query = seed.uri;
         } else {
-            query = seed.title + " " + seed.author;
+            query = PlayerManager.cleanTrackTitle(seed.title) + " " + PlayerManager.cleanTrackTitle(seed.author);
         }
 
         PlayerManager.getInstance().loadAndPlay(ctx.getEvent(), query);

@@ -465,11 +465,13 @@ public class PlaylistCommand extends SlashCommand {
                 } catch (Exception ignored) {}
             }
             if (track == null) {
+                String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(pt.getTitle());
+                String cleanAuthor = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(pt.getAuthor());
                 com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo info = new com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo(
-                        pt.getTitle(),
-                        pt.getAuthor(),
+                        cleanTitle,
+                        cleanAuthor,
                         pt.getDuration(),
-                        pt.getUri() != null ? pt.getUri() : pt.getTitle(),
+                        pt.getUri() != null ? pt.getUri() : cleanTitle,
                         false,
                         pt.getUri(),
                         null,
@@ -477,7 +479,7 @@ public class PlaylistCommand extends SlashCommand {
                 );
                 String query = pt.getUri() != null && !pt.getUri().isEmpty() 
                                ? pt.getUri() 
-                               : "ytmsearch:" + pt.getTitle() + " " + (pt.getAuthor() != null ? pt.getAuthor() : "");
+                               : "ytsearch:" + cleanTitle + " " + (cleanAuthor != null ? cleanAuthor : "");
                 track = new com.discord.musicbot.audio.DeferredTrack(info, query, null);
             }
             if (pl.isMewsic()) {
@@ -512,7 +514,9 @@ public class PlaylistCommand extends SlashCommand {
         }
         // Fallback: search by title + author
         if (pt.getTitle() != null && !pt.getTitle().isEmpty()) {
-            String search = "ytmsearch:" + pt.getTitle() + " " + (pt.getAuthor() != null ? pt.getAuthor() : "");
+            String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(pt.getTitle());
+            String cleanAuthor = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(pt.getAuthor());
+            String search = "ytsearch:" + cleanTitle + " " + (cleanAuthor != null ? cleanAuthor : "");
             return loadSingle(search.trim(), guild);
         }
         return null;
