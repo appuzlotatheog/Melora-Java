@@ -390,7 +390,7 @@ public class PlaylistCommand extends SlashCommand {
     }
 
     private void resolveAndAddTrack(CommandContext ctx, PlaylistData pl, String query) {
-        PlayerManager.getInstance().loadItemOrdered(ctx.getGuild(), query, new AudioLoadResultHandler() {
+        PlayerManager.getInstance().loadItemWithFallback(ctx.getGuild(), query, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
                 PlaylistTrack pt = audioTrackToPlaylistTrack(track);
@@ -479,7 +479,7 @@ public class PlaylistCommand extends SlashCommand {
                 );
                 String query = pt.getUri() != null && !pt.getUri().isEmpty() 
                                ? pt.getUri() 
-                               : "ytsearch:" + cleanTitle + " " + (cleanAuthor != null ? cleanAuthor : "");
+                               : "ytmsearch:" + cleanTitle + " " + (cleanAuthor != null ? cleanAuthor : "");
                 track = new com.discord.musicbot.audio.DeferredTrack(info, query, null);
             }
             if (pl.isMewsic()) {
@@ -516,7 +516,7 @@ public class PlaylistCommand extends SlashCommand {
         if (pt.getTitle() != null && !pt.getTitle().isEmpty()) {
             String cleanTitle = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(pt.getTitle());
             String cleanAuthor = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(pt.getAuthor());
-            String search = "ytsearch:" + cleanTitle + " " + (cleanAuthor != null ? cleanAuthor : "");
+            String search = "ytmsearch:" + cleanTitle + " " + (cleanAuthor != null ? cleanAuthor : "");
             return loadSingle(search.trim(), guild);
         }
         return null;
@@ -524,7 +524,7 @@ public class PlaylistCommand extends SlashCommand {
 
     private static AudioTrack loadSingle(String query, net.dv8tion.jda.api.entities.Guild guild) {
         CompletableFuture<AudioTrack> future = new CompletableFuture<>();
-        PlayerManager.getInstance().loadItemOrdered(guild, query, new AudioLoadResultHandler() {
+        PlayerManager.getInstance().loadItemWithFallback(guild, query, new AudioLoadResultHandler() {
             @Override public void trackLoaded(AudioTrack track) { future.complete(track); }
             @Override public void playlistLoaded(AudioPlaylist pl) {
                 future.complete(pl.getTracks().isEmpty() ? null : pl.getTracks().get(0));

@@ -217,7 +217,7 @@ public class MewsicCommand extends SlashCommand {
                     if (sourceId != null && !sourceId.isEmpty()) {
                         pt.setUri("https://www.youtube.com/watch?v=" + sourceId);
                     } else {
-                        pt.setUri("ytsearch:" + com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(artist) + " - " + com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(title));
+                        pt.setUri("ytmsearch:" + com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(artist) + " - " + com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(title));
                     }
                     
                     if (!pt.getTitle().isEmpty()) {
@@ -331,7 +331,7 @@ public class MewsicCommand extends SlashCommand {
                             null,
                             null
                     );
-                    String query = uri != null ? uri : "ytsearch:" + cleanArtist + " - " + cleanTitle;
+                    String query = uri != null ? uri : "ytmsearch:" + cleanArtist + " - " + cleanTitle;
                     
                     com.sedmelluq.discord.lavaplayer.track.AudioTrack track = new com.discord.musicbot.audio.DeferredTrack(info, query, null);
                     track.setUserData("{\"requester\":\"" + ctx.getUser().getId() + "\", \"mewsic\":true}");

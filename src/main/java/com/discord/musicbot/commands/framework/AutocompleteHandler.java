@@ -172,29 +172,32 @@ public class AutocompleteHandler {
             choices.add(new Command.Choice(label, choiceVal));
         }
 
-        // If user typed something, search Spotify for exact studio song titles and artists
+        // If user typed something, search YouTube for exact song titles and artists
         if (value.length() >= 2 && !value.startsWith("http") && !value.startsWith("scsearch:") && !value.startsWith("ytsearch:") && !value.startsWith("ytmsearch:")) {
             final List<Command.Choice> historyChoices = new ArrayList<>(choices);
-            com.discord.musicbot.audio.PlayerManager.getInstance().searchSpotify(value).thenAccept(results -> {
-                List<Command.Choice> spotifyChoices = new ArrayList<>();
-                for (com.discord.musicbot.audio.PlayerManager.SpotifyMetadata meta : results) {
-                    if (spotifyChoices.size() >= 25) break;
-                    String label = "🎵 " + meta.title() + " — " + meta.artist();
+            com.discord.musicbot.audio.PlayerManager.getInstance().searchYouTube(value).thenAccept(results -> {
+                List<Command.Choice> ytChoices = new ArrayList<>();
+                for (com.sedmelluq.discord.lavaplayer.track.AudioTrack track : results) {
+                    if (ytChoices.size() >= 25) break;
+                    String title = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().title);
+                    String author = com.discord.musicbot.audio.PlayerManager.cleanTrackTitle(track.getInfo().author);
+                    String label = "🎵 " + title + " — " + author;
                     if (label.length() > 95) label = label.substring(0, 95) + "...";
-                    String val = (meta.spotifyUrl() != null && (meta.spotifyUrl().contains("spotify.com") || meta.spotifyUrl().startsWith("http")))
-                            ? meta.spotifyUrl()
-                            : "https://open.spotify.com/search/" + java.net.URLEncoder.encode(meta.title() + " " + meta.artist(), java.nio.charset.StandardCharsets.UTF_8);
+                    String val = track.getInfo().uri;
+                    if (val == null || val.trim().isEmpty() || !val.startsWith("http")) {
+                        val = "ytmsearch:" + title + " " + author;
+                    }
                     if (val.length() > 100) val = val.substring(0, 100);
-                    spotifyChoices.add(new Command.Choice(label, val));
+                    ytChoices.add(new Command.Choice(label, val));
                 }
                 for (Command.Choice hc : historyChoices) {
-                    if (spotifyChoices.size() >= 25) break;
-                    boolean exists = spotifyChoices.stream().anyMatch(c -> c.getName().equals(hc.getName()) || c.getAsString().equals(hc.getAsString()));
+                    if (ytChoices.size() >= 25) break;
+                    boolean exists = ytChoices.stream().anyMatch(c -> c.getName().equals(hc.getName()) || c.getAsString().equals(hc.getAsString()));
                     if (!exists) {
-                        spotifyChoices.add(hc);
+                        ytChoices.add(hc);
                     }
                 }
-                event.replyChoices(spotifyChoices).queue();
+                event.replyChoices(ytChoices).queue();
             }).exceptionally(ex -> {
                 event.replyChoices(historyChoices).queue();
                 return null;

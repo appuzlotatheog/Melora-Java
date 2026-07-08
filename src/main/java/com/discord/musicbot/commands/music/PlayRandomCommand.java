@@ -67,7 +67,7 @@ public class PlayRandomCommand extends SlashCommand {
         ).useComponentsV2().queue(
             hook -> {
                 String requesterId = ctx.getUser().getId();
-                PlayerManager.getInstance().loadItemOrdered(ctx.getGuild(), finalQuery, new AudioLoadResultHandler() {
+                PlayerManager.getInstance().loadItemWithFallback(ctx.getGuild(), finalQuery, new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
                         track.setUserData("{\"requester\":\"" + requesterId + "\"}");
